@@ -3,7 +3,10 @@ Estimation in Difference-in-Difference (DID) designs with multiple groups and pe
 
 **Short description**
 
-did_multiplegt estimates the effect of a treatment on an outcome, using group- (e.g. county- or state-) level panel data with multiple groups and periods. The panel of groups may be unbalanced: not all groups have to be observed at every period (see FAQ section for more info on that).  The data may also be at a more disaggregated level than the group level (e.g. individual-level wage data to measure the effect of a regional-level minimum-wage on individuals' wages). The treatment doesn't need to be binary.
+did_multiplegt estimates the effect of a treatment on an outcome, using group- (e.g. county- or state-) level panel data with multiple groups and periods. 
+The panel of groups may be unbalanced: not all groups have to be observed at every period (see FAQ section for more info on that). 
+The data may also be at a more disaggregated level than the group level (e.g. individual-level wage data to measure the effect of a regional-level minimum-wage on individuals' wages).
+The treatment doesn't need to be binary.
 
 **Installation**
 
@@ -12,6 +15,18 @@ Check out the command in stata for more details.
 ```applescript
 ssc install did_multiplegt, replace
 ```
+
+
+**see FAQ section**
+
+> Do I have to include group- and time- fixed effects in my regression when using the did_multiplegt package?
+No, you do not have to.  Even if you do not specify any of the options controls(varlist), trends_nonparam(varlist) or trends_lin(varlist), group- and time-fixed effects will be accounted for.
+> When does the command produce a table, and what does the table contain?
+If strictly more than one bootstrap replication has been run, the command returns a table with all the estimated treatment effects and placebos, their standard errors, their 95% confidence intervals, the number of observations used in the estimation, and the number of switchers the effects and placebos apply to.  The p-value from the joint test that all placebos are equal to 0 is not shown in the table, but it is stored in e().
+
+
+
+
 
 **References**
 

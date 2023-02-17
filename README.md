@@ -18,12 +18,12 @@ ssc install did_multiplegt, replace
 
 **see FAQ section**
 
-> ❓**Do I have to include group- and time- fixed effects in my regression when using the did_multiplegt package?
+> ❓**Do I have to include group- and time- fixed effects in my regression when using the did_multiplegt package?**
 
 
 No, you do not have to.  Even if you do not specify any of the options controls(varlist), trends_nonparam(varlist) or trends_lin(varlist), group- and time-fixed effects will be accounted for.
 
-> ❓**When does the command produce a table, and what does the table contain?
+> ❓**When does the command produce a table, and what does the table contain?**
 
 If strictly more than one bootstrap replication has been run, the command returns a table with all the estimated treatment effects and placebos, their standard errors, their 95% confidence intervals, the number of observations used in the estimation, and the number of switchers the effects and placebos apply to.  The p-value from the joint test that all placebos are equal to 0 is not shown in the table, but it is stored in e().
 

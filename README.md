@@ -18,7 +18,7 @@ ssc install did_multiplegt, replace
 
 **see FAQ section**
 
-> [Do I have to include group- and time- fixed effects in my regression when using the did_multiplegt package?]()
+> $\color{blue}Do I have to include group- and time- fixed effects in my regression when using the did_multiplegt package?$
 
 
 No, you do not have to.  Even if you do not specify any of the options controls(varlist), trends_nonparam(varlist) or trends_lin(varlist), group- and time-fixed effects will be accounted for.

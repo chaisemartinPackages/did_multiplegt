@@ -1,10 +1,12 @@
 # did_multiplegt
 Estimation in Difference-in-Difference (DID) designs with multiple groups and periods.
 
+**Short description**
 
-
-
-
+    did_multiplegt estimates the effect of a treatment on an outcome, using group- (e.g. county- or state-) level panel data with multiple groups and periods.  The panel
+    of groups may be unbalanced: not all groups have to be observed at every period (see FAQ section for more info on that).  The data may also be at a more
+    disaggregated level than the group level (e.g. individual-level wage data to measure the effect of a regional-level minimum-wage on individuals' wages).  The
+    treatment need not be binary.
 
 **References**
 

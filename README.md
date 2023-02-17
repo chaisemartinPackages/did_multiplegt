@@ -5,6 +5,14 @@ Estimation in Difference-in-Difference (DID) designs with multiple groups and pe
 
 did_multiplegt estimates the effect of a treatment on an outcome, using group- (e.g. county- or state-) level panel data with multiple groups and periods. The panel of groups may be unbalanced: not all groups have to be observed at every period (see FAQ section for more info on that).  The data may also be at a more disaggregated level than the group level (e.g. individual-level wage data to measure the effect of a regional-level minimum-wage on individuals' wages). The treatment doesn't need to be binary.
 
+**Installation**
+
+Check out the command in stata for more details
+
+```applescript
+ssc install did_multiplegt, replace
+```
+
 **References**
 
 de Chaisemartin, C andD'Haultfoeuille,X (2020a).American Economic Review, vol. 110, no. 9. [Two-Way Fixed Effects Estimators with HeterogeneousTreatment Effects.

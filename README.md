@@ -7,7 +7,7 @@ did_multiplegt estimates the effect of a treatment on an outcome, using group- (
 
 **Installation**
 
-Check out the command in stata for more details
+Check out the command in stata for more details.
 
 ```applescript
 ssc install did_multiplegt, replace

@@ -16,7 +16,7 @@ Check out the command in stata for more details.
 ssc install did_multiplegt, replace
 ```
 
-**see FAQ section**
+**FAQ section**
 
 > ❓**Do I have to include group- and time- fixed effects in my regression when using the did_multiplegt package?**
 

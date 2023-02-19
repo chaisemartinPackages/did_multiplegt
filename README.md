@@ -27,6 +27,7 @@ No, you do not have to.  Even if you do not specify any of the options controls(
 
 If strictly more than one bootstrap replication has been run, the command returns a table with all the estimated treatment effects and placebos, their standard errors, their 95% confidence intervals, the number of observations used in the estimation, and the number of switchers the effects and placebos apply to.  The p-value from the joint test that all placebos are equal to 0 is not shown in the table, but it is stored in e().
 
+If your question is not listed, please start a discussion [here](chaisemartin.packages@gmail.com).
 
 📖 **References**
 

@@ -1,14 +1,17 @@
 # did_multiplegt
 Estimation in Difference-in-Difference (DID) designs with multiple groups and periods.
 
-**Short description**
+[Short description](#Short description) | [Installation](#Installation)
+[FAQ section](#FAQ section) | [References](#References)
+
+## Short description
 
 did_multiplegt estimates the effect of a treatment on an outcome, using group- (e.g. county- or state-) level panel data with multiple groups and periods. 
 The panel of groups may be unbalanced: not all groups have to be observed at every period (see FAQ section for more info on that). 
 The data may also be at a more disaggregated level than the group level (e.g. individual-level wage data to measure the effect of a regional-level minimum-wage on individuals' wages).
 The treatment doesn't need to be binary.
 
-**Installation**
+## Installation
 
 Check out the command in stata for more details.
 
@@ -16,7 +19,7 @@ Check out the command in stata for more details.
 ssc install did_multiplegt, replace
 ```
 
-**FAQ section**
+## FAQ section
 
 > ❓**Do I have to include group- and time- fixed effects in my regression when using the did_multiplegt package?**
 
@@ -174,7 +177,7 @@ controls or linear trends, differences are likely to be small, however.  With co
 
 **If your question is not listed above, please send an e-mail at: chaisemartin.packages@gmail.com.**
 
-📖 **References**
+📖 ## References
 
 de Chaisemartin, C andD'Haultfoeuille,X (2020a).American Economic Review, vol. 110, no. 9. [Two-Way Fixed Effects Estimators with HeterogeneousTreatment Effects.
 ](https://www.aeaweb.org/articles?id=10.1257/aer.20181169)

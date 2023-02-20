@@ -3,7 +3,7 @@ Estimation in Difference-in-Difference (DID) designs with multiple groups and pe
 
 [Short description](#Short-description) | [Installation](#Installation)
 
-[FAQ section](#FAQ-section) | [References](#References-📖)
+[FAQ section](#FAQ-section) | [References](#📖-References )
 
 ## Short description
 
@@ -178,7 +178,8 @@ controls or linear trends, differences are likely to be small, however.  With co
 
 **If your question is not listed above, please send an e-mail at: chaisemartin.packages@gmail.com.**
 
-## References 📖 
+## 📖 References 
+
 
 de Chaisemartin, C andD'Haultfoeuille,X (2020a).American Economic Review, vol. 110, no. 9. [Two-Way Fixed Effects Estimators with HeterogeneousTreatment Effects.
 ](https://www.aeaweb.org/articles?id=10.1257/aer.20181169)

@@ -1,7 +1,7 @@
 *﻿* did_multiplegt with asymptotic variances
 ** This version: February 15th 2023
 ** This version is to take into account one covariate.
-***Doulo
+
 ********************************************************************************
 *                                 PROGRAM 1                                    *
 ********************************************************************************

@@ -3,7 +3,7 @@ Estimation in Difference-in-Difference (DID) designs with multiple groups and pe
 
 [Short description](#Short-description) | [Installation](#Installation)
 
-[FAQ section](#FAQ-section) | [References](#📖-References )
+[FAQ section](#FAQ-section) | [References](#References )
 
 ## Short description
 

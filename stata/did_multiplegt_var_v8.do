@@ -121,6 +121,9 @@ bys group_XX: egen d_sq_XX_new=mean(d_sq_XX)
 drop d_sq_XX
 rename d_sq_XX_new d_sq_XX
 
+// Storing the different possible values of the status quos
+levelsof d_sq_XX, local(levels_d_sq_XX)
+
 ////// Ever changed treatment //
 //gen diff_from_sq_XX=(treatment_XX-d_sq_XX)
 gen ever_change_d_XX=(abs(diff_from_sq_XX)>0&treatment_XX!=.)
@@ -224,27 +227,54 @@ g diff_d_XX = d.treatment_XX
 
 if "`controls'" !=""{
 local count_controls=0
-// Here there is only one covariate, so we are anticipating a bit the case with several covariates.
+
+local mycontrols_XX ""
+
+// Computing the first differences of the control variables
 foreach var of varlist `controls'{
+
 local count_controls=`count_controls'+1
+
 capture drop diff_X`count_controls'_XX
+capture drop avg_diff_X`count_controls'_XX
+capture drop resid_X`count_controls'_time_FE_XX
+
+xtset group_XX time_XX
 gen diff_X`count_controls'_XX=d.`var'
+//gen diff_X`count_controls'_XX=D.`var' should only work in panels
 
-
-// Computing average value over groups (or time ???) for each covariate, for each status quo
-bys group_XX d_sq_XX : egen avg_diff_X`count_controls'_XX = mean(diff_X`count_controls'_XX)
+// Computing average value over time for each covariate
+bys time_XX d_sq_XX : egen avg_diff_X`count_controls'_XX = mean(diff_X`count_controls'_XX) if ever_change_d_XX==0&diff_y_XX!=.&diff_X`count_controls'_XX!=.
 
 // Computing the difference between the first differences of covariates and the average of their first-difference 
-bys group_XX d_sq_XX : egen resid_X`count_controls'_time_FE_XX = diff_X`count_controls'_XX - avg_diff_X`count_controls'_XX
-}
+gen resid_X`count_controls'_time_FE_XX = diff_X`count_controls'_XX - avg_diff_X`count_controls'_XX
+
+// Storing the residual of the variables for the computation of theta_d
+local mycontrols_XX "`mycontrols_XX' resid_X`count_controls'_time_FE_XX"
+
 }
 
-///// Next steps to code:
-* Make a loop over all status quos
-* Gather all the resid_X`count_controls'_time_FE_XX into a matrix
-* Apply the matrix accum function
-* Isolate XX and Xy
-* matrix theta_d_sq_XX = invsym(XX)*Xy
+// Computing the theta_d, where d takes every possible value of status quo.
+foreach l of local levels_d_sq_XX {
+	
+preserve
+keep if ever_change_d_XX==0&d_sq_XX==`l'
+
+// Using the matrix accum function
+matrix accum overall_XX = diff_y_XX `mycontrols_XX'
+
+// Isolate the parts of the matrix which will help us
+matrix didmgt_XX = overall_XX[2..`=`count_controls'+1',2..`=`count_controls'+1']
+matrix didmgt_Xy = overall_XX[2..`=`count_controls'+1',1]
+
+// Finally, compute the coefficients
+matrix coefs_sq_`l'_XX = invsym(didmgt_XX)*didmgt_Xy
+
+restore
+}
+
+
+}
 
 
 
@@ -323,7 +353,7 @@ scalar sum_N0_l_XX = 0
 
 // For switchers in
 if ("`switchers'"==""|"`switchers'"=="in"){
-	did_multiplegt_var_core_v8 outcome_XX group_XX time_XX treatment_XX, dynamic(`dynamic') switchers_core(in)
+	did_multiplegt_var_core_v8 outcome_XX group_XX time_XX treatment_XX, dynamic(`dynamic') switchers_core(in) controls(`controls')
 	
 // Store the results
 forvalue i=0/`=l_u_a_XX'{	
@@ -343,7 +373,7 @@ if sum_N1_l_XX!=0{
 
 // For switchers out
 if ("`switchers'"==""|"`switchers'"=="out"){
-	did_multiplegt_var_core_v8 outcome_XX group_XX time_XX treatment_XX, dynamic(`dynamic') switchers_core(out)
+	did_multiplegt_var_core_v8 outcome_XX group_XX time_XX treatment_XX, dynamic(`dynamic') switchers_core(out) controls(`controls')
 	
 // Store the results
 forvalue i=0/`=l_u_a_XX'{
@@ -521,7 +551,7 @@ capture program drop did_multiplegt_var_core_v8
 
 program did_multiplegt_var_core_v8, eclass
 	version 12.0
-	syntax varlist(min=4 max=4 numeric) [if] [in] [, dynamic(integer 0) switchers_core(string)]
+	syntax varlist(min=4 max=4 numeric) [if] [in] [, dynamic(integer 0) switchers_core(string) controls(varlist numeric)]
 
 	qui{
 	
@@ -537,6 +567,7 @@ scalar l_u_a_XX=min(`dynamic', L_a_XX)
 scalar increase_XX=0
 }
 
+levelsof d_sq_XX, local(levels_d_sq_XX)
 
 *****  Estimating the DID_{+,l}s or the DID_{-,l}s *****************************
 
@@ -557,20 +588,43 @@ capture drop U_Gg`i'_XX
 capture drop count`i'_XX_temp
 capture drop count`i'_XX
 
-////// Creating long difference of outcome and differences //
-sort group_XX time_XX
-if `i'==0{
-	gen diff_y_`i'_XX = diff_y_XX
-	gen diff_y_`i'_XX_temp = diff_y_XX
+////// Creating long difference of outcome //
+xtset group_XX time_XX
+bys group_XX : gen diff_y_`i'_XX = outcome_XX - L`=`i'+1'.outcome_XX
+
+///// Creating long differences of control variables //
+if "`controls'" != ""{
+	
+	
+local count_controls=0
+
+// Computing the first differences of the control variables
+foreach var of varlist `controls'{
+	
+	
+local count_controls=`count_controls'+1
+
+capture drop diff_X`count_controls'_`i'_XX
+
+xtset group_XX time_XX
+gen diff_X`count_controls'_`i'_XX=`var' - L`=`i'+1'.`var'
+
+
+foreach l of local levels_d_sq_XX {
+
+replace diff_y_`i'_XX = diff_y_`i'_XX - coefs_sq_`l'_XX[`=`count_controls'',1]*diff_X`count_controls'_`i'_XX if d_sq_XX==`l'
+
 }
 
-if `i'>0{
-	bys group_XX : gen diff_y_`i'_XX_temp = diff_y_`=`i'-1'_XX_temp + diff_y_XX[_n+`i']
-	bys group_XX : gen diff_y_`i'_XX = diff_y_`i'_XX_temp[_n-`i']
 }
+
 
 * Do the same for all the covariates.
 * Perform the reisudalization: remove from diff_y_`i'_XX the part that can be explained by withdrawing theta_d_sq_XX*(matrix of covariates)
+
+* 1. loop over the status quos. (foreach l of local levels_d_sq_XX {})
+
+}
 
 ////// Identifying the control (g,t)s in the estimation of dynamic effect i //
 bys group_XX: gen never_change_d_`i'_XX=(F_g_XX>time_XX) if diff_y_`i'_XX!=.

@@ -57,6 +57,12 @@ capture drop ever_strict_decrease_XX
 tokenize `varlist'
 drop if `2'==.|`3'==.
 
+	if "`controls'" !=""{
+	foreach var of varlist `controls'{
+	drop if `var'==.
+	}
+	}
+
 
 ////// Note on imbalanced panels, and comparison with previous command /////
 //// 1. When a (g,t) is missing, 3 possibilities: 
@@ -612,17 +618,13 @@ gen diff_X`count_controls'_`i'_XX=`var' - L`=`i'+1'.`var'
 
 foreach l of local levels_d_sq_XX {
 
-replace diff_y_`i'_XX = diff_y_`i'_XX - coefs_sq_`l'_XX[`=`count_controls'',1]*diff_X`count_controls'_`i'_XX if d_sq_XX==`l'
+replace diff_y_`i'_XX = diff_y_`i'_XX - coefs_sq_`l'_XX[`=`count_controls'',1]*diff_X`count_controls'_`i'_XX if d_sq_XX==`l' 
+
+////// N.B. : in the above line, we do not add "&diff_X`count_controls'_`i'_XX!=." because we want to exclude from the estimation any first/long-difference for which the covariates are missing.
 
 }
 
 }
-
-
-* Do the same for all the covariates.
-* Perform the reisudalization: remove from diff_y_`i'_XX the part that can be explained by withdrawing theta_d_sq_XX*(matrix of covariates)
-
-* 1. loop over the status quos. (foreach l of local levels_d_sq_XX {})
 
 }
 

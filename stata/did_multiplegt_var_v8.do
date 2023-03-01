@@ -592,7 +592,11 @@ levelsof d_sq_XX, local(levels_d_sq_XX)
 *****  Estimating the DID_{+,l}s or the DID_{-,l}s *****************************
 
 
+<<<<<<< HEAD
 ////// Compute first the Vg_ds 
+=======
+////// Compute first the Vg_ds
+>>>>>>> Doulo
 
 matrix inv_denom_XX = invsym(didmgt_XX)
 

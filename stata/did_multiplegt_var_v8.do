@@ -781,5 +781,7 @@ bys group_XX : gen U_Gg_XX = U_Gg_num_XX/U_Gg_den_XX
 
 
 	} // end of the quietly condition
+	
+	
 
 end

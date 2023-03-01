@@ -592,7 +592,7 @@ levelsof d_sq_XX, local(levels_d_sq_XX)
 *****  Estimating the DID_{+,l}s or the DID_{-,l}s *****************************
 
 
-////// Compute first the Vg_ds 
+////// Let's compute first the Vg_ds
 
 matrix inv_denom_XX = invsym(didmgt_XX)
 

@@ -591,11 +591,16 @@ levelsof d_sq_XX, local(levels_d_sq_XX)
 
 *****  Estimating the DID_{+,l}s or the DID_{-,l}s *****************************
 
+<<<<<<< Updated upstream
 //Compute first the Vg_ds
+=======
+////// Compute first the Vg_ds 
+>>>>>>> Stashed changes
 matrix inv_denom_XX = invsym(didmgt_XX)
 
 foreach d of local levels_d_sq_XX {
 	//gen prod_`controls'_XX = resid_X`count_controls'_time_FE_XX*diff_y_XX put in line 258
+<<<<<<< Updated upstream
 	forvalue g=1/`=G_XX'{
 	mkmat prod_*_XX if group_XX==`=`g'', matrix(mat_prod_`g'_XX)
 	local k=0
@@ -618,6 +623,34 @@ foreach d of local levels_d_sq_XX {
 	}
 	
 }
+=======
+	forvalue g=1/`=G_XX'{ 
+	mkmat prod_*_XX if group_XX==`=`g'', matrix(mat_prod_`g'_XX)
+	local k=0
+	foreach var of varlist `controls'{
+		local k = `=`k'+1'
+		
+		capture drop weight_`g'_`d'_`var'
+		capture drop vG_`g'_`d'_`var'
+		capture drop w_`g'_`d'_`var'
+		gen w_`g'_`d'_`var'=.
+		
+		matrix mat_prod_glob_`g'_XX= (inv_denom_XX[`k',1...]*mat_prod_`g'_XX'*`=G_XX')' //this gives a Tx1-matrix
+		
+		forvalue t=`=t_min_XX'/`=T_max_XX'{
+			scalar scal_prod_glob_`g'_`t'_XX = mat_prod_glob_`g'_XX[`t',1]
+			replace w_`g'_`d'_`var'=scalar(scal_prod_glob_`g'_`t'_XX) if time_XX==`=`t''&group_XX==`=`g'' //Fill-in the variable generated above
+		}
+		
+		gen weight_`g'_`=`d''_`var' =w_`g'_`d'_`var'*(d_sq_XX==`=`d'')*(F_g_XX>time_XX)
+		gen vG_`g'_`=`d''_`var' = weight_`g'_`d'_`var' - coefs_sq_`d'_XX[`k',1]
+	}
+	} //To do: Drop all created variables that are not used afterwards.
+	
+}
+//////Vg_ds ok.
+
+>>>>>>> Stashed changes
 ////// Loop to estimate the dynamic effects //
 forvalue i=0/`=l_u_a_XX'{
 	

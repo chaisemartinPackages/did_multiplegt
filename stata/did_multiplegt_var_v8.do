@@ -1,6 +1,6 @@
 *﻿* did_multiplegt with asymptotic variances
 ** This version: February 15th 2023
-** This version is augmented with the computation of the V^d_{G,g}
+** This version is augmented with the computation of the V^d_{G,g}s
 
 ********************************************************************************
 *                                 PROGRAM 1                                    *

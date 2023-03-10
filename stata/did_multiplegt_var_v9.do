@@ -1,6 +1,6 @@
 *﻿* did_multiplegt with asymptotic variances
 ** This version: February 15th 2023
-** This version is augmented with the computation of the V^d_{G,g}
+** This version is augmented with the computation of the V^d_{G,g}s
 
 ********************************************************************************
 *                                 PROGRAM 1                                    *
@@ -125,6 +125,7 @@ rename d_sq_XX_new d_sq_XX
 
 // Storing the different possible values of the status quos
 levelsof d_sq_XX, local(levels_d_sq_XX)
+///// N.B. : Here, we will do a check to see if, for each status quo, there is at least one control and a switcher. If not, any group with this status quo will not be taken into account for the estimation. As such, performing residualization for this group will not be necessary.
 
 ////// Ever changed treatment //
 //gen diff_from_sq_XX=(treatment_XX-d_sq_XX)
@@ -187,7 +188,6 @@ replace N_gt_XX=0 if outcome_XX==.|treatment_XX==.
 
 
 ////// Computing t_min_XX, T_max_XX, and replacing F_g_XX by last period plus one for those that never change treatment //
-
 sum time_XX
 scalar t_min_XX=r(min)
 scalar T_max_XX=r(max)
@@ -212,7 +212,6 @@ gen R_g_XX=(avg_post_switch_treat_XX>d_sq_XX) if F_g_XX!=T_g_XX+1
 // Here, R_g_XX==. for never-switchers groups only. Indeed, thanks
 // to line 108 (drop if controls_time_XX==0) (g,t) such that t>T_g dropped.
 
-
 ///// Creating the variable L_g_XX = T_g_XX - F_g_XX, so that we can compute L_u or L_a afterwards. //
 gen L_g_XX = T_g_XX - F_g_XX
 
@@ -223,19 +222,19 @@ bysort group_XX : gen first_obs_by_gp_XX = (_n==1)
 ////// Declaring data as panel //
 xtset group_XX time_XX
 
-///// Writing the variables as first differences //
+///// Writing the outcome and the treatment variables as first differences //
 capture drop diff_y_XX
 capture drop diff_d_XX
 gen diff_y_XX = d.outcome_XX
 g diff_d_XX = d.treatment_XX
 
+///// Dealing with controls : computing first differences of the controls and necessary variables for the residualization of the outcome variable //
 if "`controls'" !=""{
 local count_controls=0
 
 local mycontrols_XX ""
 local prod_controls_y ""
 
-// Computing the first differences of the control variables
 foreach var of varlist `controls'{
 
 local count_controls=`count_controls'+1
@@ -244,84 +243,108 @@ capture drop diff_X`count_controls'_XX
 capture drop avg_diff_X`count_controls'_XX
 capture drop resid_X`count_controls'_time_FE_XX
 
+// Computing the first differences of the control variables
 xtset group_XX time_XX
-gen diff_X`count_controls'_XX=d.`var'
-//gen diff_X`count_controls'_XX=D.`var' should only work in panels
+gen diff_X`count_controls'_XX=D.`var'
 
-// Computing average value over time for each covariate
+///// First step of the residualization : computing the \Delta \Dot{X}_{g,t}
+// Computing the average value over groups for each first difference of covariate, amon not-yet-treated cells
 bys time_XX d_sq_XX : egen avg_diff_X`count_controls'_XX = mean(diff_X`count_controls'_XX) if ever_change_d_XX==0&diff_y_XX!=.&diff_X`count_controls'_XX!=.
 
-// Computing the difference between the first differences of covariates and the average of their first-difference 
+// Computing the difference between the first differences of covariates and the average of their first-difference, which gives us the residuals of a regression of covariates on time fixed effects. 
 gen resid_X`count_controls'_time_FE_XX = diff_X`count_controls'_XX - avg_diff_X`count_controls'_XX
-//replace resid_X`count_controls'_time_FE_XX=0 if resid_X`count_controls'_time_FE_XX==.
+replace resid_X`count_controls'_time_FE_XX=0 if resid_X`count_controls'_time_FE_XX==.
 
-// Storing the residual of the variables for the computation of theta_d
+// Storing the obtained residuals for the computation of theta_d
 local mycontrols_XX "`mycontrols_XX' resid_X`count_controls'_time_FE_XX"
-
-///// For the computation of the V^d_{G,g}s - to store in the core program ?
-// Compute the product of \Delta \Dot{X}_{g,t} \Delta Y_{g,t} for time periods between 2 and F_g_XX-1
-capture drop prod_X`count_controls'_diff_y_temp_XX
-capture drop prod_X`count_controls'_diff_y_XX
-
-gen prod_X`count_controls'_diff_y_temp_XX = resid_X`count_controls'_time_FE_XX*diff_y_XX if time_XX>=2&time_XX<F_g_XX
-replace prod_X`count_controls'_diff_y_temp_XX = 0 if prod_X`count_controls'_diff_y_temp_XX ==.
-
-// Computing the sum for each group to obtain the term \sum_{t=2}^{F_g-1}*N_{g,t}*\Delta \Dot{X}_{g,t}* \Delta Y_{g,t}
-bys group_XX: egen prod_X`count_controls'_diff_y_XX = total(prod_X`count_controls'_diff_y_temp_XX)
-
-////// N.B. : When the N_gt_XX will no longer all be equal to 0, the trick will be to multiply both diff_X`count_controls'_XX and diff_y_XX by sqrt(N_gt_XX).
-
-// Storing the products of the \Delta \Dot{X} by \Delta Y 
-local prod_controls_y_XX "`prod_controls_y_XX' prod_X`count_controls'_diff_y_XX"
-
 
 }
 
-mkmat `prod_controls_y_XX', matrix(prod_diff_X_diff_y_XX)
-matrix prod_diff_X_diff_y_XX=prod_diff_X_diff_y_XX'
 
+///// Computation of the V^d_{G,g}s //
 
-
-// Computing the theta_d, where d takes every possible value of status quo.
 foreach l of local levels_d_sq_XX {
 	
-	capture drop v_g_`l'_XX`count_controls'
-
+	forvalue i=1/`count_controls'{
+		capture drop v_g_`l'_XX`i'
+	}
 	
 preserve
+
+// Isolate the observations thanks to which we will compute the matrix Denom (see the equation of V^d_{G,g})
 keep if ever_change_d_XX==0&d_sq_XX==`l'
 
-// Using the matrix accum function
+// Using the matrix accum function, to regress the first difference of outcome on the first differences of covariates. We will obtain the vectors of coefficients \theta_d s, where d varies according to possible status quo values.
 matrix accum overall_XX = diff_y_XX `mycontrols_XX'
-///// N.B.: even if the matrix is singular, it applies the inversion operator, without error message
+///// N.B.: even if the matrix is singular, it applies the inversion operator, without error message, which means we have to make a check for the matrix being non singular.
 
 // Isolate the parts of the matrix which will help us
 matrix didmgt_XX = overall_XX[2..`=`count_controls'+1',2..`=`count_controls'+1']
 matrix didmgt_Xy = overall_XX[2..`=`count_controls'+1',1]
 
-// Finally, compute the coefficients
+// Computing the vectors of coefficients \theta_d s (if there are k covariates, their size if k x 1)
 matrix coefs_sq_`l'_XX = invsym(didmgt_XX)*didmgt_Xy
 
+// Computing the matrix Denom^{-1}
 matrix inv_Denom_`l'_XX = invsym(didmgt_XX)
 
-// Making the product of the (k x k) matrix and the (k x 1) vector to obtain a vector of dimension (k x 1).
+
+
+// Compute the product of \Delta \Dot{X}_{g,t} \Delta Y_{g,t} for time periods between 2 and F_g_XX-1 (no need to control that we are in the correct time periods as we selected the subsample of not-yet-treated cells)
+local count_controls=0
+local prod_controls_y_XX ""
+foreach var of varlist `controls'{
+
+local count_controls=`count_controls'+1
+
+capture drop prod_X`count_controls'_diff_y_temp_XX
+capture drop prod_X`count_controls'_diff_y_XX
+
+gen prod_X`count_controls'_diff_y_temp_XX = resid_X`count_controls'_time_FE_XX*diff_y_XX
+replace prod_X`count_controls'_diff_y_temp_XX = 0 if prod_X`count_controls'_diff_y_temp_XX ==.
+
+// Computing the sum for each group to obtain the term \sum_{t=2}^{F_g-1}*N_{g,t}*\Delta \Dot{X}_{g,t}* \Delta Y_{g,t}
+bys group_XX: egen prod_X`count_controls'_diff_y_XX = total(prod_X`count_controls'_diff_y_temp_XX)
+
+////// N.B. : When the N_gt_XX will no longer all be equal to 1, the trick will be to multiply both diff_X`count_controls'_XX and diff_y_XX by sqrt(N_gt_XX).
+
+// Storing the products of the \Delta \Dot{X}_{g,t} by \Delta Y_{g,t} 
+local prod_controls_y_XX "`prod_controls_y_XX' prod_X`count_controls'_diff_y_XX"
+
+}
+
+collapse (mean) `prod_controls_y_XX', by(group_XX)
+
+// Transforming the above product into a matrix, to be able to multiply it by Denom^{-1}
+//set emptycells drop
+mkmat `prod_controls_y_XX', matrix(prod_diff_X_diff_y_XX)
+matrix prod_diff_X_diff_y_XX=prod_diff_X_diff_y_XX'
+
+
+
+// Making the product of the Denom^{-1} matrix and the \sum_{t=2}^{F_g-1}*N_{g,t}*\Delta \Dot{X}_{g,t}* \Delta Y_{g,t} matrix
 matrix v_g_`l'_XX = inv_Denom_`l'_XX*G_XX*prod_diff_X_diff_y_XX 
 matrix v_g_`l'_XX=v_g_`l'_XX'
 
+// Transforming it into a variable
 svmat v_g_`l'_XX
 
+// Keep the variables we are interested in, and collapse them, so that the dataset to save is as small as possible
+keep group_XX v_g_`l'_XX*
+
 save dataset_`l'_XX, replace
+
+///// TO DO:  think about where the dataset is saved ! Should we ask a path to the user with the help of an option ?
+// Doulo--> Take a look at the STATA commands mkdir (creates a directory in the user's pc)  and erase (to remove the stored datasets once you are done using them).
+
 restore
 capture drop merge_`l'
-merge 1:m group_XX time_XX using dataset_`l'_XX, keepusing(v_g_`l'_XX*) gen (merge_`l')
-drop if group_XX*time_XX==.
 
-}
-********************************************************************************
-///// Computation of the V^d_{G,g}s - to store in the core program ?
+// Merge the saved dataset with the initial one
+merge m:1 group_XX using dataset_`l'_XX, gen (merge_`l')
 
-foreach l of local levels_d_sq_XX {
 
+// Now computing the V^d_{G,g}s on the whole dataset.
 local count_controls=0
 
 	foreach var of varlist `controls'{
@@ -335,17 +358,10 @@ replace  V_`l'_`count_controls'_Gg_XX = - coefs_sq_`l'_XX[`count_controls',1] if
 
 	}
 
-/*
-//store the V^d_{G,g}s in a K-vector
-mkmat V_`l'_*_Gg_XX, matrix(V_`l'_Gg_XX)
-
-matrix V_`l'_Gg_XX = V_`l'_Gg_XX'
-*/
-
 }
 
 
-}
+} // end of the if "`controls'" !="" condition
 
 
 
@@ -433,18 +449,6 @@ forvalue i=0/`=l_u_a_XX'{
 if N1_`i'_XX!=0{
 		replace U_Gg`i'_plus_XX = U_Gg`i'_XX
 		replace count`i'_plus_XX= count`i'_XX
-		
-/*			// Do we need a condition equivalent to "if N1_`i'_XX!=0" ?
-			if "`controls'"!=""{
-			scalar sum_M_V_XX = 0
-			foreach l of local levels_d_sq_XX {
-				scalar sum_M_V_XX = sum_M_V_XX + M_`l'_Gg`i'_`count_controls'_XX*V_`l'_`count_controls'_Gg_XX
-			}
-		
-			replace U_Gg`i'_plus_XX = U_Gg`i'_plus_XX + sum_M_V_XX
-
-		}
-			*/
 	}
 
 }
@@ -465,18 +469,6 @@ forvalue i=0/`=l_u_a_XX'{
 if N0_`i'_XX!=0{
 		replace U_Gg`i'_minus_XX = - U_Gg`i'_XX
 		replace count`i'_minus_XX= count`i'_XX
-		
-/*		// Do we need a condition equivalent to "if N1_`i'_XX!=0" ?
-		if "`controls'"!=""{
-			scalar sum_M_V_XX = 0
-			foreach l of local levels_d_sq_XX {
-				scalar sum_M_V_XX = sum_M_V_XX + M_`l'_Gg`i'_`count_controls'_XX*V_`l'_`count_controls'_Gg_XX
-			}
-			
-			replace U_Gg`i'_minus_XX = U_Gg`i'_minus_XX + sum_M_V_XX
-			
-		}
-		*/
 	}
 	
 }
@@ -763,7 +755,7 @@ bysort group_XX : egen count`i'_XX=total(count`i'_XX_temp)
 // replace U_Gg`i'_XX = U_Gg`i'_XX*first_obs_by_gp_XX
 replace count`i'_XX = count`i'_XX*first_obs_by_gp_XX
 
-///// Computing the m^+{d,l}
+///// Computing \sum_{d=0}^{\Bar{d}} M_{d,l} V^d_{G,g}, to remove it from the U_{G,g,l}s
 if "`controls'"!=""{
 	capture drop sum_`i'_M_V_XX
 	
@@ -773,29 +765,27 @@ if "`controls'"!=""{
 foreach var of varlist `controls'{
 	
 	local count_controls=`count_controls'+1
-	
-		
-		capture drop dummy_m_Gg`i'_`count_controls'_XX
-		capture drop m_Gg`i'_`count_controls'_temp_XX
-		capture drop M_Gg`i'_`count_controls'_XX
-		
-		gen dummy_m_Gg`i'_`count_controls'_XX = (`i'<=T_g_XX-2)
-		
-		gen m_Gg`i'_`count_controls'_temp_XX = dummy_m_Gg`i'_`count_controls'_XX*(G_XX/N`=increase_XX'_`i'_XX)*N_gt_XX*[distance_to_switch_`i'_XX - (N`=increase_XX'_t_`i'_g_XX/N_gt_control_`i'_XX) * never_change_d_`i'_XX] * diff_X`count_controls'_`i'_XX
-				
-				
+								
 levelsof d_sq_XX, local(levels_d_sq_XX)
 
 foreach l of local levels_d_sq_XX {
+	capture drop dummy_m_Gg`i'_`l'_`count_controls'_XX
+	capture drop m_Gg`i'_`l'_`count_controls'_temp_XX
 	capture drop M_d_`i'_`l'_`count_controls'_XX
 	//gen M_d_`i'_`l'_`count_controls'_XX=0
 
-	egen M_d_`i'_`l'_`count_controls'_XX = total(m_Gg`i'_`count_controls'_temp_XX) if d_sq_XX==`l'
-		
-	replace M_d_`i'_`l'_`count_controls'_XX = M_d_`i'_`l'_`count_controls'_XX/G_XX 
-	replace M_d_`i'_`l'_`count_controls'_XX =0 if M_d_`i'_`l'_`count_controls'_XX==.
-		
-	replace sum_`i'_M_V_XX = sum_`i'_M_V_XX + M_d_`i'_`l'_`count_controls'_XX*V_`l'_`count_controls'_Gg_XX
+// Generating a dummy checking that the time period is the good one and the status quo too.
+gen dummy_m_Gg`i'_`l'_`count_controls'_XX = (`i'<=T_g_XX-2&d_sq_XX==`l')
+
+// Computing the m_{G,g,d,l}.
+gen m_Gg`i'_`l'_`count_controls'_temp_XX = dummy_m_Gg`i'_`l'_`count_controls'_XX*(G_XX/N`=increase_XX'_`i'_XX)*N_gt_XX*[distance_to_switch_`i'_XX - (N`=increase_XX'_t_`i'_g_XX/N_gt_control_`i'_XX) * never_change_d_`i'_XX] * diff_X`count_controls'_`i'_XX
+
+// Summing, and dividing by the number of groups to obtain the M_{d,l}s
+egen M_d_`i'_`l'_`count_controls'_XX = total(m_Gg`i'_`l'_`count_controls'_temp_XX) 	
+replace M_d_`i'_`l'_`count_controls'_XX = M_d_`i'_`l'_`count_controls'_XX/G_XX 
+
+// Computing \sum_{d=0}^{\Bar{d}} M_{d,l} V^d_{G,g}	
+replace sum_`i'_M_V_XX = sum_`i'_M_V_XX + M_d_`i'_`l'_`count_controls'_XX*V_`l'_`count_controls'_Gg_XX
 		
 		
 }	
@@ -803,6 +793,7 @@ foreach l of local levels_d_sq_XX {
 	
 }
 
+// Removing or adding \sum_{d=0}^{\Bar{d}} M_{d,l} V^d_{G,g} to the U_Ggs, depending on whether we consider switchers in or switchers out.
 if scalar(increase_XX)==1{
 replace U_Gg`i'_XX = U_Gg`i'_XX - sum_`i'_M_V_XX 
 }
@@ -810,10 +801,10 @@ if scalar(increase_XX)==0{
 replace U_Gg`i'_XX = U_Gg`i'_XX + sum_`i'_M_V_XX
 }
 
-// add a comment
+}
+
 replace U_Gg`i'_XX = U_Gg`i'_XX*first_obs_by_gp_XX
 
-}
 
 }
 
@@ -874,3 +865,11 @@ bys group_XX : gen U_Gg_XX = U_Gg_num_XX/U_Gg_den_XX
 	} // end of the quietly condition
 
 end
+
+
+********************************************************************************
+********************************************************************************
+** TO DO LIST
+* when merging datasets to compute the v_g_XX s, we save some data sets as an intermediary step. Find a way to let the user specify a path for these datasets ? Or erase the datasets just after they have been created ?
+* residualization might take some time. As such, we want to do residualization only for status quos with bgroups intervening in a couple switcher/control. That is, suppose a switcher has no control, as it will not be taken into account in the estimation, we do not want to perform residualization for this group if it is the only one with this value of status quo.
+* the function invsym() displays 0 when the matrix is nonsingular. We should add a step where we check that covariates are not colinear before running invsym().

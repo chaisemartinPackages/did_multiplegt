@@ -262,7 +262,7 @@ local mycontrols_XX "`mycontrols_XX' resid_X`count_controls'_time_FE_XX"
 
 
 ///// Computation of the V^d_{G,g}s //
-
+local store_singular_XX "" //To store status quo for which the Denom matrix is not defined (continues from line 295)
 foreach l of local levels_d_sq_XX {
 	
 	forvalue i=1/`count_controls'{
@@ -286,8 +286,22 @@ matrix didmgt_Xy = overall_XX[2..`=`count_controls'+1',1]
 matrix coefs_sq_`l'_XX = invsym(didmgt_XX)*didmgt_Xy
 
 // Computing the matrix Denom^{-1}
-matrix inv_Denom_`l'_XX = invsym(didmgt_XX)
+	//Check first if the matrix is invertible, invsym() inverts a matrix even if it is singular
+	//1. An option to do so:
+	capture drop scalar det_XX
+	scalar det_XX = det(didmgt_XX)
+	matrix inv_Denom_`l'_XX = invsym(didmgt_XX)
 
+//Customize errors to display (continues at the end of this loop)
+if (scalar(det_XX)==0){ 
+	//Check if the determinant is zero and display erros (and exit??)
+	local store_singular_XX = "`store_singular_XX' `l' "
+	//di as error "Warning!: Two or more of your controls are autocorrelated within groups with statuquo:"
+	//di as error "`l'"
+	//di as error "As results, the command will only consider the controls correction for the other group(s).`store_singular_XX'"
+	scalar drop det_XX
+}
+	//2. Second option is to use inv(), with the constraint to losse accuracy compared to invsym()
 
 
 // Compute the product of \Delta \Dot{X}_{g,t} \Delta Y_{g,t} for time periods between 2 and F_g_XX-1 (no need to control that we are in the correct time periods as we selected the subsample of not-yet-treated cells)
@@ -335,7 +349,7 @@ keep group_XX v_g_`l'_XX*
 save dataset_`l'_XX, replace
 
 ///// TO DO:  think about where the dataset is saved ! Should we ask a path to the user with the help of an option ?
-// Doulo--> Take a look at the STATA commands mkdir (creates a directory in the user's pc)  and erase (to remove the stored datasets once you are done using them).
+// Take a look at the STATA commands mkdir (creates a directory in the user's pc)  and erase (to remove the stored datasets once you are done using them).
 
 restore
 capture drop merge_`l'
@@ -359,7 +373,11 @@ replace  V_`l'_`count_controls'_Gg_XX = - coefs_sq_`l'_XX[`count_controls',1] if
 	}
 
 }
-
+//Display errors if one of the Denoms is not defined
+if ("`store_singular_XX'"!=""){
+	di as error "Warning!: Two or more of your controls are autocorrelated within groups with statuquo: [`store_singular_XX']"
+	di as error "As results, the command will only consider the controls correction for the other group(s), if any."
+}
 
 } // end of the if "`controls'" !="" condition
 
@@ -871,5 +889,7 @@ end
 ********************************************************************************
 ** TO DO LIST
 * when merging datasets to compute the v_g_XX s, we save some data sets as an intermediary step. Find a way to let the user specify a path for these datasets ? Or erase the datasets just after they have been created ?
+
 * residualization might take some time. As such, we want to do residualization only for status quos with bgroups intervening in a couple switcher/control. That is, suppose a switcher has no control, as it will not be taken into account in the estimation, we do not want to perform residualization for this group if it is the only one with this value of status quo.
-* the function invsym() displays 0 when the matrix is nonsingular. We should add a step where we check that covariates are not colinear before running invsym().
+
+* the function invsym() displays 0 when the matrix is nonsingular. We should add a step where we check that covariates are not colinear before running invsym(). !Done

@@ -1,14 +1,14 @@
 *﻿* did_multiplegt with asymptotic variances
 ** This version: February 15th 2023
-** This version is to take into account one covariate.
+** This version is augmented with the computation of the V^d_{G,g}s
 
 ********************************************************************************
 *                                 PROGRAM 1                                    *
 ********************************************************************************
 
-capture program drop did_multiplegt_var_v8
+capture program drop did_multiplegt_var_v10
 
-program did_multiplegt_var_v8, eclass
+program did_multiplegt_var_v10, eclass
 	version 12.0
 	syntax varlist(min=4 max=4 numeric) [if] [in] [, dynamic(integer 0) switchers(string) controls(varlist numeric) drop_larger_lower]
 
@@ -69,16 +69,12 @@ drop if `2'==.|`3'==.
 //// 1.a) D(g,t) missing Y(g,t) not missing
 //// 1.b) D(g,t) not missing Y(g,t) missing
 //// 1.c) D(g,t) missing Y(g,t) missing.
-//// 2. At the group level, two possibilities: 
-//// 2.a) all groups g observed continuously from T_min to T_max, with either 1<T_min or T_max<T (or both): the group enters the panel late or leaves early or both, but when observed observed continuously.
-//// 2.b) for at least one group g, there is a t_1, t_2, t_3 t_1<t_2<t_3 such that g unobserved at t_1 and t_3 and observed at t_2.
-//// There are differences in conventions when dealing with missing D(g,t) between old and new version of the command: 
-//// Old command intentionally dropped all (g,t)s with missing D(g,t) or Y(g,t). 
-//// Old command also unintentionally dropped some (g,t) such that D(g,t') missing for some t'<t. See e.g. line 1580.
-//// New command tries to keep some (g,t)s with missing D(g,t) and non-missing Y(g,t). 
-//// Also tries to almost always keep (g,t) such that D(g,t') missing for some t'>t. See conventions used below. 
+//// There are differences in conventions when dealing with missing D(g,t) between old and new version of the command. Unlike the old command, the new command tries to keep as many (g,t)s with missing D(g,t)
+/// or X(g,t) and non-missing Y(g,t). 
 //// In view of these conventions, old and new command should not give different results when panel balanced (D(g,t) and Y(g,t) never missing) or when we only have (g,t)-missingness of type 1.b).
 //// Otherwise, can yield different results.
+//// See dofile XXX with toy examples with missing data where the two commands give similar or different results according to the pattern of missingness.
+
 
 ******  Creating the necessary variables. ************************************
 
@@ -129,6 +125,7 @@ rename d_sq_XX_new d_sq_XX
 
 // Storing the different possible values of the status quos
 levelsof d_sq_XX, local(levels_d_sq_XX)
+///// N.B. : Here, we will do a check to see if, for each status quo, there is at least one control and a switcher. If not, any group with this status quo will not be taken into account for the estimation. As such, performing residualization for this group will not be necessary.
 
 ////// Ever changed treatment //
 //gen diff_from_sq_XX=(treatment_XX-d_sq_XX)
@@ -191,7 +188,6 @@ replace N_gt_XX=0 if outcome_XX==.|treatment_XX==.
 
 
 ////// Computing t_min_XX, T_max_XX, and replacing F_g_XX by last period plus one for those that never change treatment //
-
 sum time_XX
 scalar t_min_XX=r(min)
 scalar T_max_XX=r(max)
@@ -199,6 +195,8 @@ replace F_g_XX=T_max_XX+1 if F_g_XX==0 // defining F_g as T+1 for never-treated 
 
 ////// Determining T_g, last period where there is still a group with the same treatment as g's in period 1 and whose treatment has not changed since the start of the panel. //
 bys d_sq_XX : egen T_g_XX = max(F_g_XX) 
+// bys d_sq_XX `trends_nonparam' : egen T_g_XX = max(F_g_XX) - does it work ??
+
 replace T_g_XX = T_g_XX-1
 
 ////// Defining R_g, an indicator variable for groups whose average post switch treatment value is larger than their initial value of treatment. They will be considered switchers in. If R_g==0, that means the group is a switcher out. For never-switchers, R_g will be undefined. //
@@ -214,7 +212,6 @@ gen R_g_XX=(avg_post_switch_treat_XX>d_sq_XX) if F_g_XX!=T_g_XX+1
 // Here, R_g_XX==. for never-switchers groups only. Indeed, thanks
 // to line 108 (drop if controls_time_XX==0) (g,t) such that t>T_g dropped.
 
-
 ///// Creating the variable L_g_XX = T_g_XX - F_g_XX, so that we can compute L_u or L_a afterwards. //
 gen L_g_XX = T_g_XX - F_g_XX
 
@@ -225,18 +222,19 @@ bysort group_XX : gen first_obs_by_gp_XX = (_n==1)
 ////// Declaring data as panel //
 xtset group_XX time_XX
 
-///// Writing the variables as first differences //
+///// Writing the outcome and the treatment variables as first differences //
 capture drop diff_y_XX
 capture drop diff_d_XX
 gen diff_y_XX = d.outcome_XX
 g diff_d_XX = d.treatment_XX
 
+///// Dealing with controls : computing first differences of the controls and necessary variables for the residualization of the outcome variable //
 if "`controls'" !=""{
 local count_controls=0
 
 local mycontrols_XX ""
+local prod_controls_y ""
 
-// Computing the first differences of the control variables
 foreach var of varlist `controls'{
 
 local count_controls=`count_controls'+1
@@ -245,42 +243,79 @@ capture drop diff_X`count_controls'_XX
 capture drop avg_diff_X`count_controls'_XX
 capture drop resid_X`count_controls'_time_FE_XX
 
+// Computing the first differences of the control variables
 xtset group_XX time_XX
-gen diff_X`count_controls'_XX=d.`var'
-//gen diff_X`count_controls'_XX=D.`var' should only work in panels
+gen diff_X`count_controls'_XX=D.`var'
 
-// Computing average value over time for each covariate
+///// First step of the residualization : computing the \Delta \Dot{X}_{g,t}
+// Computing the average value over groups for each first difference of covariate, amon not-yet-treated cells
 bys time_XX d_sq_XX : egen avg_diff_X`count_controls'_XX = mean(diff_X`count_controls'_XX) if ever_change_d_XX==0&diff_y_XX!=.&diff_X`count_controls'_XX!=.
 
-// Computing the difference between the first differences of covariates and the average of their first-difference 
+// Computing the difference between the first differences of covariates and the average of their first-difference, which gives us the residuals of a regression of covariates on time fixed effects. 
 gen resid_X`count_controls'_time_FE_XX = diff_X`count_controls'_XX - avg_diff_X`count_controls'_XX
+replace resid_X`count_controls'_time_FE_XX=0 if resid_X`count_controls'_time_FE_XX==.
 
-// Storing the residual of the variables for the computation of theta_d
+// Storing the obtained residuals for the computation of theta_d
 local mycontrols_XX "`mycontrols_XX' resid_X`count_controls'_time_FE_XX"
+
+// Generating the product between \Dot{X}_{g,t} and \Delta Y_{g,t}
+capture drop prod_X`count_controls'_diff_y_temp_XX
+capture drop prod_X`count_controls'_diff_y_XX
+
+gen prod_X`count_controls'_diff_y_temp_XX = resid_X`count_controls'_time_FE_XX*diff_y_XX if time_XX>=2&time_XX<F_g_XX
+replace prod_X`count_controls'_diff_y_temp_XX = 0 if prod_X`count_controls'_diff_y_temp_XX ==.
+
+// Computing the sum for each group to obtain the term \sum_{t=2}^{F_g-1}*N_{g,t}*\Delta \Dot{X}_{g,t}* \Delta Y_{g,t}
+bys group_XX: egen prod_X`count_controls'_diff_y_XX = total(prod_X`count_controls'_diff_y_temp_XX)
 
 }
 
-// Computing the theta_d, where d takes every possible value of status quo.
+
+
 foreach l of local levels_d_sq_XX {
 	
+
 preserve
+
+// Isolate the observations thanks to which we will compute the matrix Denom (see the equation of V^d_{G,g})
 keep if ever_change_d_XX==0&d_sq_XX==`l'
 
-// Using the matrix accum function
+// Using the matrix accum function, to regress the first difference of outcome on the first differences of covariates. We will obtain the vectors of coefficients \theta_d s, where d varies according to possible status quo values.
 matrix accum overall_XX = diff_y_XX `mycontrols_XX'
+///// N.B.: even if the matrix is singular, it applies the inversion operator, without error message, which means we have to make a check for the matrix being non singular.
 
 // Isolate the parts of the matrix which will help us
 matrix didmgt_XX = overall_XX[2..`=`count_controls'+1',2..`=`count_controls'+1']
 matrix didmgt_Xy = overall_XX[2..`=`count_controls'+1',1]
 
-// Finally, compute the coefficients
+// Computing the vectors of coefficients \theta_d s for each status quo values (if there are k covariates, their size if k x 1)
 matrix coefs_sq_`l'_XX = invsym(didmgt_XX)*didmgt_Xy
 
+// Computing the matrix Denom^{-1}
+matrix inv_Denom_`l'_XX = invsym(didmgt_XX)*G_XX
+
 restore
+
+// Computing the V^d_{G,g}s. If their status quo is d, they must be equal to Denom^{-1}*G/N^c_d*\sum_{t=2}^{F_g-1}*N_{g,t}*\Delta \Dot{X}_{g,t}* \Delta Y_{g,t} -\theta_d, and they must be equal to -\theta_d otherwise.
+
+forvalue k=1/`=`count_controls'' {
+	
+	capture drop V_g_X`k'_`l'_XX
+	// Setting the value of V^d_{G,g} equal to -\theta_d by default.
+	gen V_g_X`k'_`l'_XX =-coefs_sq_`l'_XX[`k',1]
+
+		forvalue k_bis=1/`=`count_controls''{
+	// If the status quo of the group is d, replace it V^d_{G,g} by what a matrix product would have given us.
+	replace V_g_X`k'_`l'_XX= V_g_X`k'_`l'_XX + inv_Denom_`l'_XX[`k',`k_bis']*prod_X`k_bis'_diff_y_XX if d_sq_XX==`l'&F_g_XX>=3
+
+	
+		}
+		
 }
 
-
 }
+
+} // end of the if "`controls'" !="" condition
 
 
 
@@ -344,6 +379,7 @@ forvalue i=0/`=l_XX'{
 	scalar N1_`i'_XX=0
 	scalar N0_`i'_XX=0
 
+
 }
 
 gen U_Gg_plus_XX = 0
@@ -355,11 +391,11 @@ scalar sum_N0_l_XX = 0
 
 
 
-////// Perform here the estimation, i.e. call the program did_multiplegt_var_core_v8. //
+////// Perform here the estimation, i.e. call the program did_multiplegt_var_core_v10. //
 
 // For switchers in
 if ("`switchers'"==""|"`switchers'"=="in"){
-	did_multiplegt_var_core_v8 outcome_XX group_XX time_XX treatment_XX, dynamic(`dynamic') switchers_core(in) controls(`controls')
+	did_multiplegt_var_core_v10 outcome_XX group_XX time_XX treatment_XX, dynamic(`dynamic') switchers_core(in) controls(`controls')
 	
 // Store the results
 forvalue i=0/`=l_u_a_XX'{	
@@ -367,35 +403,36 @@ forvalue i=0/`=l_u_a_XX'{
 if N1_`i'_XX!=0{
 		replace U_Gg`i'_plus_XX = U_Gg`i'_XX
 		replace count`i'_plus_XX= count`i'_XX
-}
-
 	}
+
+}
 	
 if sum_N1_l_XX!=0{
 	replace U_Gg_plus_XX = U_Gg_XX
 	scalar U_Gg_den_plus_XX=U_Gg_den_XX
 	}
-	}
+	
+	} // end of the loop for switchers in
 
 // For switchers out
 if ("`switchers'"==""|"`switchers'"=="out"){
-	did_multiplegt_var_core_v8 outcome_XX group_XX time_XX treatment_XX, dynamic(`dynamic') switchers_core(out) controls(`controls')
+	did_multiplegt_var_core_v10 outcome_XX group_XX time_XX treatment_XX, dynamic(`dynamic') switchers_core(out) controls(`controls')
 	
 // Store the results
 forvalue i=0/`=l_u_a_XX'{
 if N0_`i'_XX!=0{
 		replace U_Gg`i'_minus_XX = - U_Gg`i'_XX
 		replace count`i'_minus_XX= count`i'_XX
-}
-	
 	}
+	
+}
 	
 if sum_N0_l_XX!=0{
 	replace U_Gg_minus_XX = - U_Gg_XX
 	scalar U_Gg_den_minus_XX=U_Gg_den_XX
 	}
 	
-	}
+	} // end of the loop for switchers out 
 
 
 ///// Aggregating the obtained results. //
@@ -552,10 +589,10 @@ end
 *                                 PROGRAM 2                                    *
 ********************************************************************************
 
-capture program drop did_multiplegt_var_core_v8
+capture program drop did_multiplegt_var_core_v10
 
 
-program did_multiplegt_var_core_v8, eclass
+program did_multiplegt_var_core_v10, eclass
 	version 12.0
 	syntax varlist(min=4 max=4 numeric) [if] [in] [, dynamic(integer 0) switchers_core(string) controls(varlist numeric)]
 
@@ -588,7 +625,7 @@ capture drop N`=increase_XX'_t_`i'_g_XX
 capture drop N_gt_control_`i'_XX
 capture drop diff_y_`i'_XX
 capture drop diff_y_`i'_XX_temp
-capture drop dummy_for_U_Gg`i'_temp_XX
+capture drop dummy_U_Gg`i'_XX
 capture drop U_Gg`i'_temp_XX
 capture drop U_Gg`i'_XX
 capture drop count`i'_XX_temp
@@ -659,9 +696,9 @@ if N`=increase_XX'_`i'_XX!=0{
 
 ///// Computing the U^+_{G,g,l} //
 // Creating a dummy variable indicating whether l<=T_g_XX-2
-gen dummy_for_U_Gg`i'_temp_XX = (`i'<=T_g_XX-2)
+gen dummy_U_Gg`i'_XX = (`i'<=T_g_XX-2)
 // Computing (g,t) cell U^+_{G,g,l}
-gen U_Gg`i'_temp_XX = dummy_for_U_Gg`i'_temp_XX*(G_XX / N`=increase_XX'_`i'_XX) * N_gt_XX * [distance_to_switch_`i'_XX - (N`=increase_XX'_t_`i'_g_XX/N_gt_control_`i'_XX) * never_change_d_`i'_XX] * diff_y_`i'_XX 
+gen U_Gg`i'_temp_XX = dummy_U_Gg`i'_XX*(G_XX / N`=increase_XX'_`i'_XX) * N_gt_XX * [distance_to_switch_`i'_XX - (N`=increase_XX'_t_`i'_g_XX/N_gt_control_`i'_XX) * never_change_d_`i'_XX] * diff_y_`i'_XX 
 
 
 gen count`i'_XX_temp=(U_Gg`i'_temp_XX!=.&U_Gg`i'_temp_XX!=0|(U_Gg`i'_temp_XX==0&diff_y_`i'_XX==0&(distance_to_switch_`i'_XX!=0|(N`=increase_XX'_t_`i'_g_XX!=0&never_change_d_`i'_XX!=0))))
@@ -669,8 +706,58 @@ gen count`i'_XX_temp=(U_Gg`i'_temp_XX!=.&U_Gg`i'_temp_XX!=0|(U_Gg`i'_temp_XX==0&
 bysort group_XX : egen U_Gg`i'_XX=total(U_Gg`i'_temp_XX)
 bysort group_XX : egen count`i'_XX=total(count`i'_XX_temp)  
  
-replace U_Gg`i'_XX = U_Gg`i'_XX*first_obs_by_gp_XX
+// replace U_Gg`i'_XX = U_Gg`i'_XX*first_obs_by_gp_XX
 replace count`i'_XX = count`i'_XX*first_obs_by_gp_XX
+
+///// When controls, computing \sum_{d=0}^{\Bar{d}} M_{d,l} V^d_{G,g}, to remove it from the U_{G,g,l}s
+if "`controls'"!=""{
+	capture drop sum_`i'_M_V_XX
+	
+	local count_controls=0
+	gen sum_`i'_M_V_XX = 0
+
+foreach var of varlist `controls'{
+	
+	local count_controls=`count_controls'+1
+								
+levelsof d_sq_XX, local(levels_d_sq_XX)
+
+foreach l of local levels_d_sq_XX {
+	capture drop dummy_m_Gg`i'_`l'_`count_controls'_XX
+	capture drop m_Gg`i'_`l'_`count_controls'_temp_XX
+	capture drop M_d_`i'_`l'_`count_controls'_XX
+	//gen M_d_`i'_`l'_`count_controls'_XX=0
+
+// Generating a dummy checking that the time period is the good one and the status quo too.
+gen dummy_m_Gg`i'_`l'_`count_controls'_XX = (`i'<=T_g_XX-2&d_sq_XX==`l')
+
+// Computing the m_{G,g,d,l}.
+gen m_Gg`i'_`l'_`count_controls'_temp_XX = dummy_m_Gg`i'_`l'_`count_controls'_XX*(G_XX/N`=increase_XX'_`i'_XX)*N_gt_XX*[distance_to_switch_`i'_XX - (N`=increase_XX'_t_`i'_g_XX/N_gt_control_`i'_XX) * never_change_d_`i'_XX] * diff_X`count_controls'_`i'_XX
+
+// Summing, and dividing by the number of groups to obtain the M_{d,l}s
+egen M_d_`i'_`l'_`count_controls'_XX = total(m_Gg`i'_`l'_`count_controls'_temp_XX) 	
+replace M_d_`i'_`l'_`count_controls'_XX = M_d_`i'_`l'_`count_controls'_XX/G_XX 
+
+// Computing \sum_{d=0}^{\Bar{d}} M_{d,l} V^d_{G,g}	
+replace sum_`i'_M_V_XX = sum_`i'_M_V_XX + M_d_`i'_`l'_`count_controls'_XX*V_g_X`count_controls'_`l'_XX
+		
+		
+}	
+		
+	
+}
+
+// Removing or adding \sum_{d=0}^{\Bar{d}} M_{d,l} V^d_{G,g} to the U_Ggs, depending on whether we consider switchers in or switchers out.
+if scalar(increase_XX)==1{
+replace U_Gg`i'_XX = U_Gg`i'_XX - sum_`i'_M_V_XX 
+}
+if scalar(increase_XX)==0{
+replace U_Gg`i'_XX = U_Gg`i'_XX + sum_`i'_M_V_XX
+}
+
+}
+
+replace U_Gg`i'_XX = U_Gg`i'_XX*first_obs_by_gp_XX
 
 }
 
@@ -727,6 +814,15 @@ bys group_XX : replace U_Gg_den_XX = U_Gg_den_XX + w_`i'_XX * delta_D_`i'_XX
 bys group_XX : gen U_Gg_XX = U_Gg_num_XX/U_Gg_den_XX
 
 
+
 	} // end of the quietly condition
 
 end
+
+
+********************************************************************************
+********************************************************************************
+** TO DO LIST
+* when merging datasets to compute the v_g_XX s, we save some data sets as an intermediary step. Find a way to let the user specify a path for these datasets ? Or erase the datasets just after they have been created ?
+* residualization might take some time. As such, we want to do residualization only for status quos with bgroups intervening in a couple switcher/control. That is, suppose a switcher has no control, as it will not be taken into account in the estimation, we do not want to perform residualization for this group if it is the only one with this value of status quo.
+* the function invsym() displays 0 when the matrix is nonsingular. We should add a step where we check that covariates are not colinear before running invsym().

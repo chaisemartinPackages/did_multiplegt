@@ -235,6 +235,7 @@ local count_controls=0
 local mycontrols_XX ""
 local prod_controls_y ""
 
+
 foreach var of varlist `controls'{
 
 local count_controls=`count_controls'+1
@@ -264,119 +265,134 @@ local mycontrols_XX "`mycontrols_XX' resid_X`count_controls'_time_FE_XX"
 ///// Computation of the V^d_{G,g}s //
 local store_singular_XX "" //To store status quo for which the Denom matrix is not defined (continues from line 295)
 foreach l of local levels_d_sq_XX {
-	
-	forvalue i=1/`count_controls'{
-		capture drop v_g_`l'_XX`i'
-	}
-	
-preserve
 
-// Isolate the observations thanks to which we will compute the matrix Denom (see the equation of V^d_{G,g})
-keep if ever_change_d_XX==0&d_sq_XX==`l'
-
-// Using the matrix accum function, to regress the first difference of outcome on the first differences of covariates. We will obtain the vectors of coefficients \theta_d s, where d varies according to possible status quo values.
-matrix accum overall_XX = diff_y_XX `mycontrols_XX'
-///// N.B.: even if the matrix is singular, it applies the inversion operator, without error message, which means we have to make a check for the matrix being non singular.
-
-// Isolate the parts of the matrix which will help us
-matrix didmgt_XX = overall_XX[2..`=`count_controls'+1',2..`=`count_controls'+1']
-matrix didmgt_Xy = overall_XX[2..`=`count_controls'+1',1]
-
-// Computing the vectors of coefficients \theta_d s (if there are k covariates, their size if k x 1)
-matrix coefs_sq_`l'_XX = invsym(didmgt_XX)*didmgt_Xy
-
-// Computing the matrix Denom^{-1}
-	//Check first if the matrix is invertible, invsym() inverts a matrix even if it is singular
-	//1. An option to do so:
-	capture drop scalar det_XX
-	scalar det_XX = det(didmgt_XX)
-	matrix inv_Denom_`l'_XX = invsym(didmgt_XX)
-
-//Customize errors to display (continues at the end of this loop)
-if (scalar(det_XX)==0){ 
-	//Check if the determinant is zero and display erros (and exit??)
-	local store_singular_XX = "`store_singular_XX' `l' "
-	//di as error "Warning!: Two or more of your controls are autocorrelated within groups with statuquo:"
-	//di as error "`l'"
-	//di as error "As results, the command will only consider the controls correction for the other group(s).`store_singular_XX'"
-	scalar drop det_XX
-}
-	//2. Second option is to use inv(), with the constraint to losse accuracy compared to invsym()
-
-
-// Compute the product of \Delta \Dot{X}_{g,t} \Delta Y_{g,t} for time periods between 2 and F_g_XX-1 (no need to control that we are in the correct time periods as we selected the subsample of not-yet-treated cells)
-local count_controls=0
-local prod_controls_y_XX ""
-foreach var of varlist `controls'{
-
-local count_controls=`count_controls'+1
-
-capture drop prod_X`count_controls'_diff_y_temp_XX
-capture drop prod_X`count_controls'_diff_y_XX
-
-gen prod_X`count_controls'_diff_y_temp_XX = resid_X`count_controls'_time_FE_XX*diff_y_XX
-replace prod_X`count_controls'_diff_y_temp_XX = 0 if prod_X`count_controls'_diff_y_temp_XX ==.
-
-// Computing the sum for each group to obtain the term \sum_{t=2}^{F_g-1}*N_{g,t}*\Delta \Dot{X}_{g,t}* \Delta Y_{g,t}
-bys group_XX: egen prod_X`count_controls'_diff_y_XX = total(prod_X`count_controls'_diff_y_temp_XX)
-
-////// N.B. : When the N_gt_XX will no longer all be equal to 1, the trick will be to multiply both diff_X`count_controls'_XX and diff_y_XX by sqrt(N_gt_XX).
-
-// Storing the products of the \Delta \Dot{X}_{g,t} by \Delta Y_{g,t} 
-local prod_controls_y_XX "`prod_controls_y_XX' prod_X`count_controls'_diff_y_XX"
-
-}
-
-collapse (mean) `prod_controls_y_XX', by(group_XX)
-
-// Transforming the above product into a matrix, to be able to multiply it by Denom^{-1}
-//set emptycells drop
-mkmat `prod_controls_y_XX', matrix(prod_diff_X_diff_y_XX)
-matrix prod_diff_X_diff_y_XX=prod_diff_X_diff_y_XX'
-
-
-
-// Making the product of the Denom^{-1} matrix and the \sum_{t=2}^{F_g-1}*N_{g,t}*\Delta \Dot{X}_{g,t}* \Delta Y_{g,t} matrix
-matrix v_g_`l'_XX = inv_Denom_`l'_XX*G_XX*prod_diff_X_diff_y_XX 
-matrix v_g_`l'_XX=v_g_`l'_XX'
-
-// Transforming it into a variable
-svmat v_g_`l'_XX
-
-// Keep the variables we are interested in, and collapse them, so that the dataset to save is as small as possible
-keep group_XX v_g_`l'_XX*
-
-save dataset_`l'_XX, replace
-
-///// TO DO:  think about where the dataset is saved ! Should we ask a path to the user with the help of an option ?
-// Take a look at the STATA commands mkdir (creates a directory in the user's pc)  and erase (to remove the stored datasets once you are done using them).
-
-restore
-capture drop merge_`l'
-
-// Merge the saved dataset with the initial one
-merge m:1 group_XX using dataset_`l'_XX, gen (merge_`l')
-
-
-// Now computing the V^d_{G,g}s on the whole dataset.
-local count_controls=0
-
-	foreach var of varlist `controls'{
+forvalue i=1/`count_controls'{
+			capture drop v_g_`l'_XX`i'
+		}
+// A statuquo is relevant iff it is taken by at least two groups, otherwise we do not need to perform the residualization for this specific statuquo
+inspect group_XX if d_sq_XX==`l' 
+scalar perform1_XX = `r(N_unique)' //count the number of groups with statuquo l (A)
+inspect F_g_XX if d_sq_XX==`l' //At least one is a swicher
+scalar perform2_XX = `r(N_unique)' 
+	if (scalar(perform1_XX)>1&scalar(perform2_XX)>1){ //!Error message because we do not have any control for this statuquo
 		
-local count_controls=`count_controls'+1
+	preserve
 
-capture drop V_`l'_`count_controls'_Gg_XX
+	// Isolate the observations thanks to which we will compute the matrix Denom (see the equation of V^d_{G,g})
+	keep if ever_change_d_XX==0&d_sq_XX==`l'
+	
+		// Using the matrix accum function, to regress the first difference of outcome on the first differences of covariates. We will obtain the vectors of coefficients \theta_d s, where d varies according to possible status quo values.
+		matrix accum overall_XX = diff_y_XX `mycontrols_XX'
+		///// N.B.: even if the matrix is singular, it applies the inversion operator, without error message, which means we have to make a check for the matrix being non singular.
 
-gen V_`l'_`count_controls'_Gg_XX = v_g_`l'_XX`count_controls'- coefs_sq_`l'_XX[`count_controls',1] if d_sq_XX==`l'&F_g_XX>=3
-replace  V_`l'_`count_controls'_Gg_XX = - coefs_sq_`l'_XX[`count_controls',1] if V_`l'_`count_controls'_Gg_XX ==.
+		// Isolate the parts of the matrix which will help us
+		matrix didmgt_XX = overall_XX[2..`=`count_controls'+1',2..`=`count_controls'+1']
+		matrix didmgt_Xy = overall_XX[2..`=`count_controls'+1',1]
+
+		// Computing the vectors of coefficients \theta_d s (if there are k covariates, their size if k x 1)
+		matrix coefs_sq_`l'_XX = invsym(didmgt_XX)*didmgt_Xy
+
+		// Computing the matrix Denom^{-1}
+			//Check first if the matrix is invertible, invsym() inverts a matrix even if it is singular
+			//To check: why the residualization of the covariate is zero??
+			//1. An option to do so:
+			capture drop scalar det_XX
+			scalar det_XX = det(didmgt_XX)
+			matrix inv_Denom_`l'_XX = invsym(didmgt_XX)
+
+		//Customize errors to display (continues at the end of this loop)
+		if (scalar(det_XX)==0){ 
+			//Check if the determinant is zero and display erros (and exit??)
+			local store_singular_XX = "`store_singular_XX' `l' "
+			//di as error "Warning!: Two or more of your controls are autocorrelated within groups with statuquo:"
+			//di as error "`l'"
+			//di as error "As results, the command will only consider the controls correction for the other group(s).`store_singular_XX'"
+			scalar drop det_XX
+		}
+			//2. Second option is to use inv(), with the constraint to losse accuracy compared to invsym()
+
+
+		// Compute the product of \Delta \Dot{X}_{g,t} \Delta Y_{g,t} for time periods between 2 and F_g_XX-1 (no need to control that we are in the correct time periods as we selected the subsample of not-yet-treated cells)
+		local count_controls=0
+		local prod_controls_y_XX ""
+		foreach var of varlist `controls'{
+
+		local count_controls=`count_controls'+1
+
+		capture drop prod_X`count_controls'_diff_y_temp_XX
+		capture drop prod_X`count_controls'_diff_y_XX
+
+		gen prod_X`count_controls'_diff_y_temp_XX = resid_X`count_controls'_time_FE_XX*diff_y_XX
+		replace prod_X`count_controls'_diff_y_temp_XX = 0 if prod_X`count_controls'_diff_y_temp_XX ==.
+
+		// Computing the sum for each group to obtain the term \sum_{t=2}^{F_g-1}*N_{g,t}*\Delta \Dot{X}_{g,t}* \Delta Y_{g,t}
+		bys group_XX: egen prod_X`count_controls'_diff_y_XX = total(prod_X`count_controls'_diff_y_temp_XX)
+
+		////// N.B. : When the N_gt_XX will no longer all be equal to 1, the trick will be to multiply both diff_X`count_controls'_XX and diff_y_XX by sqrt(N_gt_XX).
+
+		// Storing the products of the \Delta \Dot{X}_{g,t} by \Delta Y_{g,t} 
+		local prod_controls_y_XX "`prod_controls_y_XX' prod_X`count_controls'_diff_y_XX"
+
+		}
+
+		collapse (mean) `prod_controls_y_XX', by(group_XX)
+
+		// Transforming the above product into a matrix, to be able to multiply it by Denom^{-1}
+		//set emptycells drop
+		mkmat `prod_controls_y_XX', matrix(prod_diff_X_diff_y_XX)
+		matrix prod_diff_X_diff_y_XX=prod_diff_X_diff_y_XX'
+
+
+
+		// Making the product of the Denom^{-1} matrix and the \sum_{t=2}^{F_g-1}*N_{g,t}*\Delta \Dot{X}_{g,t}* \Delta Y_{g,t} matrix
+		matrix v_g_`l'_XX = inv_Denom_`l'_XX*G_XX*prod_diff_X_diff_y_XX 
+		matrix v_g_`l'_XX=v_g_`l'_XX'
+
+		// Transforming it into a variable
+		svmat v_g_`l'_XX
+
+		// Keep the variables we are interested in, and collapse them, so that the dataset to save is as small as possible
+		keep group_XX v_g_`l'_XX*
+
+		save dataset_`l'_XX, replace
+
+		///// TO DO:  think about where the dataset is saved ! Should we ask a path to the user with the help of an option ?
+		// Take a look at the STATA commands mkdir (creates a directory in the user's pc)  and erase (to remove the stored datasets once you are done using them).
+
+		restore
+		capture drop merge_`l'
+
+		// Merge the saved dataset with the initial one
+		merge m:1 group_XX using dataset_`l'_XX, gen (merge_`l')
 
 	}
+	//end if on perform_XX
+		// Now computing the V^d_{G,g}s on the whole dataset.
+		local count_controls=0
+
+		foreach var of varlist `controls'{
+				
+		local count_controls=`count_controls'+1
+
+		capture drop V_`l'_`count_controls'_Gg_XX
+		
+		forvalue i=1/`count_controls'{
+			capture gen v_g_`l'_XX`i' =. //to avoid error when the svmat is not executed, because of irrelevance of the statuquo (for residualization)
+		}
+		gen V_`l'_`count_controls'_Gg_XX = v_g_`l'_XX`count_controls'- coefs_sq_`l'_XX[`count_controls',1] if d_sq_XX==`l'&F_g_XX>=3
+		replace  V_`l'_`count_controls'_Gg_XX = - coefs_sq_`l'_XX[`count_controls',1] if V_`l'_`count_controls'_Gg_XX ==.
+
+			}
+		
 
 }
 //Display errors if one of the Denoms is not defined
 if ("`store_singular_XX'"!=""){
-	di as error "Warning!: Two or more of your controls are autocorrelated within groups with statuquo: [`store_singular_XX']"
-	di as error "As results, the command will only consider the controls correction for the other group(s), if any."
+	di as error "Warning! Controls are not taken into account for groups with statuquo: [`store_singular_XX']"
+	di as error "The problem may occur in the following situations:"
+	di as error "1. two or more of your controls are autocorrelated in groups with statuquo: [`store_singular_XX']"
+	di as error "2. the controls do not vary over time within these groups".
+	di as error "As results, the command will only consider the controls for the other group(s), if any."
 }
 
 } // end of the if "`controls'" !="" condition

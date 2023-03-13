@@ -691,7 +691,7 @@ gen diff_X`count_controls'_`i'_XX=`var' - L`=`i'+1'.`var'
 
 
 foreach l of local levels_d_sq_XX {
-	if (scalar(perform1_XX)>1&scalar(perform2_XX)>1){ //!Error message because we do not have any control for this statuquo
+	if (scalar(perform1_XX_`l')>1&scalar(perform2_XX_`l')>1){ //!Error message because we do not have any control for this statuquo
 
 replace diff_y_`i'_XX = diff_y_`i'_XX - coefs_sq_`l'_XX[`=`count_controls'',1]*diff_X`count_controls'_`i'_XX if d_sq_XX==`l' 
 
@@ -762,7 +762,7 @@ foreach var of varlist `controls'{
 levelsof d_sq_XX, local(levels_d_sq_XX)
 
 foreach l of local levels_d_sq_XX {
-	if (scalar(perform1_XX)>1&scalar(perform2_XX)>1){ //!Error message because we do not have any control for this statuquo
+	if (scalar(perform1_XX_`l')>1&scalar(perform2_XX_`l')>1){ //!Error message because we do not have any control for this statuquo
 
 	capture drop dummy_m_Gg`i'_`l'_`count_controls'_XX
 	capture drop m_Gg`i'_`l'_`count_controls'_temp_XX

@@ -258,6 +258,7 @@ replace resid_X`count_controls'_time_FE_XX=0 if resid_X`count_controls'_time_FE_
 // Storing the obtained residuals for the computation of theta_d
 local mycontrols_XX "`mycontrols_XX' resid_X`count_controls'_time_FE_XX"
 
+
 // Generating the product between \Dot{X}_{g,t} and \Delta Y_{g,t}
 capture drop prod_X`count_controls'_diff_y_temp_XX
 capture drop prod_X`count_controls'_diff_y_XX
@@ -270,10 +271,17 @@ bys group_XX: egen prod_X`count_controls'_diff_y_XX = total(prod_X`count_control
 
 }
 
-
+// Creating a local storing the status quos for which Denom_d is not defined (continues from line ????)
+local store_singular_XX ""
 
 foreach l of local levels_d_sq_XX {
 	
+// A statuquo is relevant iff it is taken by at least two groups, otherwise we do not need to perform the residualization for this specific statuquo
+inspect group_XX if d_sq_XX==`l' 
+scalar perform1_XX_`l' = `r(N_unique)' //count the number of groups with statuquo l (A)
+inspect F_g_XX if d_sq_XX==`l' //At least one is a swicher
+scalar perform2_XX_`l' = `r(N_unique)' 
+	if (scalar(perform1_XX_`l')>1&scalar(perform2_XX_`l')>1){ //!Error message because we do not have any control for this statuquo
 
 preserve
 
@@ -291,8 +299,25 @@ matrix didmgt_Xy = overall_XX[2..`=`count_controls'+1',1]
 // Computing the vectors of coefficients \theta_d s for each status quo values (if there are k covariates, their size if k x 1)
 matrix coefs_sq_`l'_XX = invsym(didmgt_XX)*didmgt_Xy
 
-// Computing the matrix Denom^{-1}
-matrix inv_Denom_`l'_XX = invsym(didmgt_XX)*G_XX
+		// Computing the matrix Denom^{-1}
+			//Check first if the matrix is invertible, invsym() inverts a matrix even if it is singular
+			//To check: why the residualization of the covariate is zero??
+			//1. An option to do so:
+			capture drop scalar det_XX
+			scalar det_XX = det(didmgt_XX)
+			matrix inv_Denom_`l'_XX = invsym(didmgt_XX)*G_XX
+
+		//Customize errors to display (continues at the end of this loop)
+		if (scalar(det_XX)==0){ 
+			//Check if the determinant is zero and display erros (and exit??)
+			local store_singular_XX = "`store_singular_XX' `l' "
+			//di as error "Warning!: Two or more of your controls are autocorrelated within groups with statuquo:"
+			//di as error "`l'"
+			//di as error "As results, the command will only consider the controls correction for the other group(s).`store_singular_XX'"
+			scalar drop det_XX
+		}
+			//2. Second option is to use inv(), with the constraint to losse accuracy compared to invsym()
+
 
 restore
 
@@ -314,6 +339,18 @@ forvalue k=1/`=`count_controls'' {
 }
 
 }
+
+//Display errors if one of the Denoms is not defined
+if ("`store_singular_XX'"!=""){
+	di as error "Warning! Controls are not taken into account for groups with statuquo: [`store_singular_XX']"
+	di as error "The problem may occur in the following situations:"
+	di as error "1. two or more of your controls are autocorrelated in groups with statuquo: [`store_singular_XX']"
+	di as error "2. the controls do not vary over time within these groups".
+	di as error "As results, the command will only consider the controls for the other group(s), if any."
+}
+
+}
+
 
 } // end of the if "`controls'" !="" condition
 
@@ -654,11 +691,12 @@ gen diff_X`count_controls'_`i'_XX=`var' - L`=`i'+1'.`var'
 
 
 foreach l of local levels_d_sq_XX {
+	if (scalar(perform1_XX)>1&scalar(perform2_XX)>1){ //!Error message because we do not have any control for this statuquo
 
 replace diff_y_`i'_XX = diff_y_`i'_XX - coefs_sq_`l'_XX[`=`count_controls'',1]*diff_X`count_controls'_`i'_XX if d_sq_XX==`l' 
 
 ////// N.B. : in the above line, we do not add "&diff_X`count_controls'_`i'_XX!=." because we want to exclude from the estimation any first/long-difference for which the covariates are missing.
-
+}
 }
 
 }
@@ -710,6 +748,7 @@ bysort group_XX : egen count`i'_XX=total(count`i'_XX_temp)
 replace count`i'_XX = count`i'_XX*first_obs_by_gp_XX
 
 ///// When controls, computing \sum_{d=0}^{\Bar{d}} M_{d,l} V^d_{G,g}, to remove it from the U_{G,g,l}s
+
 if "`controls'"!=""{
 	capture drop sum_`i'_M_V_XX
 	
@@ -723,6 +762,8 @@ foreach var of varlist `controls'{
 levelsof d_sq_XX, local(levels_d_sq_XX)
 
 foreach l of local levels_d_sq_XX {
+	if (scalar(perform1_XX)>1&scalar(perform2_XX)>1){ //!Error message because we do not have any control for this statuquo
+
 	capture drop dummy_m_Gg`i'_`l'_`count_controls'_XX
 	capture drop m_Gg`i'_`l'_`count_controls'_temp_XX
 	capture drop M_d_`i'_`l'_`count_controls'_XX
@@ -741,7 +782,7 @@ replace M_d_`i'_`l'_`count_controls'_XX = M_d_`i'_`l'_`count_controls'_XX/G_XX
 // Computing \sum_{d=0}^{\Bar{d}} M_{d,l} V^d_{G,g}	
 replace sum_`i'_M_V_XX = sum_`i'_M_V_XX + M_d_`i'_`l'_`count_controls'_XX*V_g_X`count_controls'_`l'_XX
 		
-		
+}		
 }	
 		
 	
@@ -820,9 +861,3 @@ bys group_XX : gen U_Gg_XX = U_Gg_num_XX/U_Gg_den_XX
 end
 
 
-********************************************************************************
-********************************************************************************
-** TO DO LIST
-* when merging datasets to compute the v_g_XX s, we save some data sets as an intermediary step. Find a way to let the user specify a path for these datasets ? Or erase the datasets just after they have been created ?
-* residualization might take some time. As such, we want to do residualization only for status quos with bgroups intervening in a couple switcher/control. That is, suppose a switcher has no control, as it will not be taken into account in the estimation, we do not want to perform residualization for this group if it is the only one with this value of status quo.
-* the function invsym() displays 0 when the matrix is nonsingular. We should add a step where we check that covariates are not colinear before running invsym().

@@ -271,17 +271,16 @@ bys group_XX: egen prod_X`count_controls'_diff_y_XX = total(prod_X`count_control
 
 }
 
-// Creating a local storing the status quos for which Denom_d is not defined (continues from line ????)
+// Creating a local storing the status quos for which Denom_d is not defined (continues from line 345)
 local store_singular_XX ""
 
 foreach l of local levels_d_sq_XX {
 	
 // A statuquo is relevant iff it is taken by at least two groups, otherwise we do not need to perform the residualization for this specific statuquo
-inspect group_XX if d_sq_XX==`l' 
-scalar perform1_XX_`l' = `r(N_unique)' //count the number of groups with statuquo l (A)
+
 inspect F_g_XX if d_sq_XX==`l' //At least one is a swicher
-scalar perform2_XX_`l' = `r(N_unique)' 
-	if (scalar(perform1_XX_`l')>1&scalar(perform2_XX_`l')>1){ //!Error message because we do not have any control for this statuquo
+scalar useful_resid_`l'_XX = `r(N_unique)' 
+	if (scalar(useful_resid_`l'_XX)>1){ 
 
 preserve
 
@@ -301,11 +300,8 @@ matrix coefs_sq_`l'_XX = invsym(didmgt_XX)*didmgt_Xy
 
 		// Computing the matrix Denom^{-1}
 			//Check first if the matrix is invertible, invsym() inverts a matrix even if it is singular
-			//To check: why the residualization of the covariate is zero??
-			//1. An option to do so:
 			capture drop scalar det_XX
 			scalar det_XX = det(didmgt_XX)
-			matrix inv_Denom_`l'_XX = invsym(didmgt_XX)*G_XX
 
 		//Customize errors to display (continues at the end of this loop)
 		if (scalar(det_XX)==0){ 
@@ -316,7 +312,9 @@ matrix coefs_sq_`l'_XX = invsym(didmgt_XX)*didmgt_Xy
 			//di as error "As results, the command will only consider the controls correction for the other group(s).`store_singular_XX'"
 			scalar drop det_XX
 		}
-			//2. Second option is to use inv(), with the constraint to losse accuracy compared to invsym()
+
+		// if the matrix is invertible (i.e. det_XX!=0), compute Denom.
+			matrix inv_Denom_`l'_XX = invsym(didmgt_XX)*G_XX
 
 
 restore
@@ -340,17 +338,17 @@ forvalue k=1/`=`count_controls'' {
 
 }
 
+}
+
 //Display errors if one of the Denoms is not defined
 if ("`store_singular_XX'"!=""){
+//	dis as error "----------warning 1-------------"
 	di as error "Warning! Controls are not taken into account for groups with statuquo: [`store_singular_XX']"
 	di as error "The problem may occur in the following situations:"
 	di as error "1. two or more of your controls are autocorrelated in groups with statuquo: [`store_singular_XX']"
 	di as error "2. the controls do not vary over time within these groups".
 	di as error "As results, the command will only consider the controls for the other group(s), if any."
 }
-
-}
-
 
 } // end of the if "`controls'" !="" condition
 
@@ -691,7 +689,7 @@ gen diff_X`count_controls'_`i'_XX=`var' - L`=`i'+1'.`var'
 
 
 foreach l of local levels_d_sq_XX {
-	if (scalar(perform1_XX_`l')>1&scalar(perform2_XX_`l')>1){ //!Error message because we do not have any control for this statuquo
+	if (scalar(useful_resid_`l'_XX)>1){ //!Error message because we do not have any control for this statuquo
 
 replace diff_y_`i'_XX = diff_y_`i'_XX - coefs_sq_`l'_XX[`=`count_controls'',1]*diff_X`count_controls'_`i'_XX if d_sq_XX==`l' 
 
@@ -762,7 +760,7 @@ foreach var of varlist `controls'{
 levelsof d_sq_XX, local(levels_d_sq_XX)
 
 foreach l of local levels_d_sq_XX {
-	if (scalar(perform1_XX_`l')>1&scalar(perform2_XX_`l')>1){ //!Error message because we do not have any control for this statuquo
+	if (scalar(useful_resid_`l'_XX)>1){ //!Error message because we do not have any control for this statuquo
 
 	capture drop dummy_m_Gg`i'_`l'_`count_controls'_XX
 	capture drop m_Gg`i'_`l'_`count_controls'_temp_XX

@@ -1,14 +1,14 @@
 *﻿* did_multiplegt with asymptotic variances
-** This version: February 15th 2023
+** This version: March 17th 2023
 ** This version is augmented with the computation of the V^d_{G,g}s
 
 ********************************************************************************
 *                                 PROGRAM 1                                    *
 ********************************************************************************
 
-capture program drop did_multiplegt_var
+capture program drop did_multiplegt_var_v10
 
-program did_multiplegt_var, eclass
+program did_multiplegt_var_v10, eclass
 	version 12.0
 	syntax varlist(min=4 max=4 numeric) [if] [in] [, dynamic(integer 0) switchers(string) controls(varlist numeric) drop_larger_lower]
 
@@ -273,23 +273,37 @@ bys group_XX: egen prod_X`count_controls'_diff_y_XX = total(prod_X`count_control
 
 // Creating a local storing the status quos for which Denom_d is not defined (continues from line 345)
 local store_singular_XX ""
+local no_obs_XX ""
 
 foreach l of local levels_d_sq_XX {
 	
-// A statuquo is relevant iff it is taken by at least two groups, otherwise we do not need to perform the residualization for this specific statuquo
+// A baseline treatment is relevant iff it is taken by at least two groups with different values of F_g_XX
+// and non-missing diff_y_XX, otherwise we do not need to perform the residualization for this specific baseline treatment.
+//XXX replace statuquo or status quo by baseline treatment everywhere.
 
 inspect F_g_XX if d_sq_XX==`l' //At least one is a swicher
-scalar useful_resid_`l'_XX = `r(N_unique)' 
-	if (scalar(useful_resid_`l'_XX)>1){ 
+scalar useful_resid_`l'_XX = `r(N_unique)'
+
+	if (scalar(useful_resid_`l'_XX)>1){
 
 preserve
 
 // Isolate the observations thanks to which we will compute the matrix Denom (see the equation of V^d_{G,g})
 keep if ever_change_d_XX==0&d_sq_XX==`l'
 
+
+
 // Using the matrix accum function, to regress the first difference of outcome on the first differences of covariates. We will obtain the vectors of coefficients \theta_d s, where d varies according to possible status quo values.
-matrix accum overall_XX = diff_y_XX `mycontrols_XX'
-///// N.B.: even if the matrix is singular, it applies the inversion operator, without error message, which means we have to make a check for the matrix being non singular.
+capture matrix accum overall_XX = diff_y_XX `mycontrols_XX'
+
+if _rc!=0{
+	
+local store_singular_XX = "`store_singular_XX' `l' "
+scalar useful_resid_`l'_XX=1
+
+}
+
+else {
 
 // Isolate the parts of the matrix which will help us
 matrix didmgt_XX = overall_XX[2..`=`count_controls'+1',2..`=`count_controls'+1']
@@ -304,19 +318,20 @@ matrix coefs_sq_`l'_XX = invsym(didmgt_XX)*didmgt_Xy
 			scalar det_XX = det(didmgt_XX)
 
 		//Customize errors to display (continues at the end of this loop)
-		if (scalar(det_XX)==0){ 
+		if (abs(scalar(det_XX))<=10^(-16)){ 
 			//Check if the determinant is zero and display erros (and exit??)
 			local store_singular_XX = "`store_singular_XX' `l' "
 			//di as error "Warning!: Two or more of your controls are autocorrelated within groups with statuquo:"
 			//di as error "`l'"
 			//di as error "As results, the command will only consider the controls correction for the other group(s).`store_singular_XX'"
 			scalar drop det_XX
+
 		}
 
 		// if the matrix is invertible (i.e. det_XX!=0), compute Denom.
 			matrix inv_Denom_`l'_XX = invsym(didmgt_XX)*G_XX
 
-
+	
 restore
 
 // Computing the V^d_{G,g}s. If their status quo is d, they must be equal to Denom^{-1}*G/N^c_d*\sum_{t=2}^{F_g-1}*N_{g,t}*\Delta \Dot{X}_{g,t}* \Delta Y_{g,t} -\theta_d, and they must be equal to -\theta_d otherwise.
@@ -333,7 +348,9 @@ forvalue k=1/`=`count_controls'' {
 
 	
 		}
-		
+				
+}
+
 }
 
 }
@@ -343,19 +360,21 @@ forvalue k=1/`=`count_controls'' {
 //Display errors if one of the Denoms is not defined
 if ("`store_singular_XX'"!=""){
 //	dis as error "----------warning 1-------------"
-	di as error "Warning! Controls are not taken into account for groups with statuquo: [`store_singular_XX']"
-	di as error "The problem may occur in the following situations:"
-	di as error "1. two or more of your controls are autocorrelated in groups with statuquo: [`store_singular_XX']"
-	di as error "2. the controls do not vary over time within these groups".
-	di as error "As results, the command will only consider the controls for the other group(s), if any."
+	di as error "Some control variables are not taken into account for groups with baseline treatment equal to: [`store_singular_XX']"
+	di as error "This may occur in the following situations:"
+	di as error "1. For groups with those values of the baseline treatment,"
+	di as error "the regression of the outcome first difference on the controls' first differences "
+	di as error "and time fixed effects has fewer observations than variables."
+	di as error "Note that for each value of the baseline treatment,"
+	di as error "those regressions are estimated among (g,t)s such that g has not changed treatment yet at t."
+	di as error "2. For groups with those values of the baseline treatment, "
+	di as error "two or more of your control variables are perfectly collinear "
+	di as error "in the sample where the regression is run, for instance because those control variables do not vary over time."
 }
 
 } // end of the if "`controls'" !="" condition
 
-
-
-
-////// Premilinaries to the estimation //
+////// Preliminaries to the estimation //
 
 ///// Computing T_u/T_a, and L_u/L_a, as it is necessary to compare them to estimate the number of dynamic effects to compute //
 
@@ -426,11 +445,11 @@ scalar sum_N0_l_XX = 0
 
 
 
-////// Perform here the estimation, i.e. call the program did_multiplegt_var_core. //
+////// Perform here the estimation, i.e. call the program did_multiplegt_var_core_v10. //
 
 // For switchers in
 if ("`switchers'"==""|"`switchers'"=="in"){
-	did_multiplegt_var_core outcome_XX group_XX time_XX treatment_XX, dynamic(`dynamic') switchers_core(in) controls(`controls')
+	did_multiplegt_var_core_v10 outcome_XX group_XX time_XX treatment_XX, dynamic(`dynamic') switchers_core(in) controls(`controls')
 	
 // Store the results
 forvalue i=0/`=l_u_a_XX'{	
@@ -451,7 +470,7 @@ if sum_N1_l_XX!=0{
 
 // For switchers out
 if ("`switchers'"==""|"`switchers'"=="out"){
-	did_multiplegt_var_core outcome_XX group_XX time_XX treatment_XX, dynamic(`dynamic') switchers_core(out) controls(`controls')
+	did_multiplegt_var_core_v10 outcome_XX group_XX time_XX treatment_XX, dynamic(`dynamic') switchers_core(out) controls(`controls')
 	
 // Store the results
 forvalue i=0/`=l_u_a_XX'{
@@ -624,10 +643,10 @@ end
 *                                 PROGRAM 2                                    *
 ********************************************************************************
 
-capture program drop did_multiplegt_var_core
+capture program drop did_multiplegt_var_core_v10
 
 
-program did_multiplegt_var_core, eclass
+program did_multiplegt_var_core_v10, eclass
 	version 12.0
 	syntax varlist(min=4 max=4 numeric) [if] [in] [, dynamic(integer 0) switchers_core(string) controls(varlist numeric)]
 

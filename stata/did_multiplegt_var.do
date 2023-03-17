@@ -6,9 +6,9 @@
 *                                 PROGRAM 1                                    *
 ********************************************************************************
 
-capture program drop did_multiplegt_var_v9
+capture program drop did_multiplegt_var
 
-program did_multiplegt_var_v9, eclass
+program did_multiplegt_var, eclass
 	version 12.0
 	syntax varlist(min=4 max=4 numeric) [if] [in] [, dynamic(integer 0) switchers(string) controls(varlist numeric) drop_larger_lower]
 
@@ -426,11 +426,11 @@ scalar sum_N0_l_XX = 0
 
 
 
-////// Perform here the estimation, i.e. call the program did_multiplegt_var_core_v9. //
+////// Perform here the estimation, i.e. call the program did_multiplegt_var_core. //
 
 // For switchers in
 if ("`switchers'"==""|"`switchers'"=="in"){
-	did_multiplegt_var_core_v9 outcome_XX group_XX time_XX treatment_XX, dynamic(`dynamic') switchers_core(in) controls(`controls')
+	did_multiplegt_var_core outcome_XX group_XX time_XX treatment_XX, dynamic(`dynamic') switchers_core(in) controls(`controls')
 	
 // Store the results
 forvalue i=0/`=l_u_a_XX'{	
@@ -451,7 +451,7 @@ if sum_N1_l_XX!=0{
 
 // For switchers out
 if ("`switchers'"==""|"`switchers'"=="out"){
-	did_multiplegt_var_core_v9 outcome_XX group_XX time_XX treatment_XX, dynamic(`dynamic') switchers_core(out) controls(`controls')
+	did_multiplegt_var_core outcome_XX group_XX time_XX treatment_XX, dynamic(`dynamic') switchers_core(out) controls(`controls')
 	
 // Store the results
 forvalue i=0/`=l_u_a_XX'{
@@ -624,10 +624,10 @@ end
 *                                 PROGRAM 2                                    *
 ********************************************************************************
 
-capture program drop did_multiplegt_var_core_v9
+capture program drop did_multiplegt_var_core
 
 
-program did_multiplegt_var_core_v9, eclass
+program did_multiplegt_var_core, eclass
 	version 12.0
 	syntax varlist(min=4 max=4 numeric) [if] [in] [, dynamic(integer 0) switchers_core(string) controls(varlist numeric)]
 

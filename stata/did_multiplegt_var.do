@@ -1,6 +1,6 @@
 *﻿* did_multiplegt with asymptotic variances
 ** This version: March 17th 2023
-** This version is augmented with the computation of the V^d_{G,g}s
+** This version allows to take control variables into account.
 
 ********************************************************************************
 *                                 PROGRAM 1                                    *
@@ -73,7 +73,7 @@ drop if `2'==.|`3'==.
 /// or X(g,t) and non-missing Y(g,t). 
 //// In view of these conventions, old and new command should not give different results when panel balanced (D(g,t) and Y(g,t) never missing) or when we only have (g,t)-missingness of type 1.b).
 //// Otherwise, can yield different results.
-//// See dofile XXX with toy examples with missing data where the two commands give similar or different results according to the pattern of missingness.
+//// See dofile comparison_old_new_command.do with toy examples with missing data where the two commands give similar or different results according to the pattern of missingness.
 
 
 ******  Creating the necessary variables. ************************************
@@ -352,10 +352,11 @@ forvalue k=1/`=`count_controls'' {
 }
 
 }
+/*
 else{
 	local store_singular_XX = "`store_singular_XX' `l'"
 }
-
+*/
 }
 
 //Display errors if one of the Denoms is not defined

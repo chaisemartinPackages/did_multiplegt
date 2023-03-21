@@ -54,6 +54,9 @@ capture drop diff_from_sq_XX
 capture drop ever_strict_increase_XX
 capture drop ever_strict_decrease_XX
 
+ereturn clear
+
+
 tokenize `varlist'
 drop if `2'==.|`3'==.
 
@@ -352,11 +355,7 @@ forvalue k=1/`=`count_controls'' {
 }
 
 }
-/*
-else{
-	local store_singular_XX = "`store_singular_XX' `l'"
-}
-*/
+
 }
 
 //Display errors if one of the Denoms is not defined
@@ -508,6 +507,7 @@ gen count`i'_global_XX=count`i'_plus_XX+count`i'_minus_XX
 egen DID_`i'_XX = total(U_Gg`i'_global_XX) 
 replace  DID_`i'_XX = DID_`i'_XX/G_XX
 scalar DID_`i'_XX = DID_`i'_XX
+ereturn scalar Effect_`i' = DID_`i'_XX
 
 
 if ("`switchers'"==""&N1_`i'_XX==0&N0_`i'_XX==0)|("`switchers'"=="out"&N0_`i'_XX==0)|("`switchers'"=="in"&N1_`i'_XX==0){
@@ -521,9 +521,11 @@ local rownames "`rownames' Effect_`i'"
 * Number of switchers
 scalar N_switchers_effect_`i'_XX=N1_`i'_XX+N0_`i'_XX
 matrix mat_res_XX[`i'+1,6]=N_switchers_effect_`i'_XX
+ereturn scalar N_switchers_effect_`i' = N_switchers_effect_`i'_XX
 * Number of observations used in the estimation
 egen N_effect_`i'_XX = total(count`i'_global_XX) 
 scalar N_effect_`i'_XX = N_effect_`i'_XX
+ereturn scalar N_effect_`i' = N_effect_`i'_XX
 matrix mat_res_XX[`i'+1,5]=N_effect_`i'_XX
 }
 
@@ -549,6 +551,7 @@ gen U_Gg_global_XX = w_plus_XX*U_Gg_plus_XX +(1-w_plus_XX)*U_Gg_minus_XX
 egen delta_XX = total(U_Gg_global_XX)
 replace delta_XX = delta_XX/G_XX
 scalar delta_XX = delta_XX
+ereturn scalar Effect_average = delta_XX
 
 // Completing the results matrix
 * Storing the results
@@ -560,13 +563,14 @@ forvalue i=0/`=l_XX'{
 	scalar N_switchers_effect_XX = N_switchers_effect_XX + N_switchers_effect_`i'_XX
 }
 matrix mat_res_XX[l_XX+2,6]=N_switchers_effect_XX
+ereturn scalar N_switchers_effect_average = N_switchers_effect_XX
 * Number of observations used in the estimation
 scalar N_effect_XX=0
 forvalue i=0/`=l_XX'{
 	scalar N_effect_XX = N_effect_XX + N_effect_`i'_XX
 }
-
 matrix mat_res_XX[l_XX+2,5]=N_effect_XX
+ereturn scalar N_effect_average = N_effect_XX
 
 
 
@@ -630,7 +634,6 @@ matrix mat_res_XX[l_XX+2,4]= UB_CI_XX
 	
 *****  Returning the results of the estimation. ******************************
 
-ereturn clear
 matrix rownames mat_res_XX= `rownames'
 matrix colnames mat_res_XX= "Estimate" "SE" "LB CI" "UB CI" "N" "Switchers"
 noisily matlist mat_res_XX

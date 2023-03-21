@@ -173,9 +173,10 @@ did_multiplegt lwage nr year union, robust_dynamic dynamic(2) breps(100) cluster
 use "/Users/148715/C DE CHAISEMARTIN Dropbox/Mélitine Malézieux/Melitine_RAship/did_multiplegt/test_dofiles_and_datasets/voting_cnty_clean.dta", clear
 
 //gen D_ishare_town2 = D_ishare_town*2
-did_multiplegt_var_v10 prestout cnty90 year numdailies , dynamic(2) //controls(  preseligible D_ishare_town)
+did_multiplegt_var_v10 prestout cnty90 year numdailies , dynamic(2) controls(/*D_ishare_town2*/ preseligible D_ishare_town)
 
-did_multiplegt prestout cnty90 year numdailies, dynamic(2) robust_dynamic cluster(cnty90) breps(0) //controls( preseligible D_ishare_town)
+did_multiplegt prestout cnty90 year numdailies, dynamic(2) robust_dynamic cluster(cnty90) breps(0) controls( preseligible D_ishare_town)
+
 // e(effect_0) =  .0032113395837595
 // e(effect_1) =  .0006728797605313
 //  e(effect_2) =  .0005675104991679

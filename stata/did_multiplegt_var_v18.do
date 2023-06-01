@@ -824,6 +824,47 @@ matrix mat_res_XX[`=l_XX'+2 + 1 + `i',4]=UB_CI_placebo_`i'_XX
 
 }
 }
+
+// modif //
+if ("`placebo'"!="")&l_placebo_XX>1{
+	
+	matrix didmgt_Placebo=J(l_placebo_XX,1,0)
+	matrix didmgt_Var_Placebo=J(l_placebo_XX,l_placebo_XX,0)
+	
+	forvalue i=1/`=l_placebo_XX'{
+		
+		matrix didmgt_Placebo[`i',1]=DID_placebo_`i'_XX
+		matrix didmgt_Var_Placebo[`i',`i']= se_placebo_`i'_XX^2
+	
+		if `i'<`placebo'{
+		forvalue j=`=`i'+1'/`placebo'{
+			
+			capture drop U_Gg_var_`i'_`j'_XX
+			capture drop U_Gg_var_`i'_`j'_2_XX
+			
+			gen U_Gg_var_`i'_`j'_XX = U_Gg_var_global_placebo_`i'_XX + U_Gg_var_global_placebo_`j'_XX
+			gen U_Gg_var_`i'_`j'_2_XX = U_Gg_var_`i'_`j'_XX^2*first_obs_by_gp_XX
+			
+			sum U_Gg_var_`i'_`j'_2_XX
+			scalar var_sum_pla_`i'_`j'_XX=r(sum)/G_XX^2
+			
+			scalar cov_`i'_`j'_XX = (var_sum_pla_`i'_`j'_XX - se_placebo_`i'_XX^2 - se_placebo_`j'_XX^2)/2
+			
+			matrix didmgt_Var_Placebo[`i',`j']= cov_`i'_`j'_XX
+			matrix didmgt_Var_Placebo[`j',`i']= cov_`i'_`j'_XX
+
+		}
+	}
+	}
+	
+	matrix didmgt_Var_Placebo_inv=invsym(didmgt_Var_Placebo)
+	matrix didmgt_Placebo_t=didmgt_Placebo'
+	matrix didmgt_chi2placebo=didmgt_Placebo_t*didmgt_Var_Placebo_inv*didmgt_Placebo
+	ereturn scalar p_jointplacebo=1-chi2(`placebo',didmgt_chi2placebo[1,1])
+
+}
+
+// modif //
 	
 }
 

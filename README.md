@@ -14,10 +14,15 @@ The treatment doesn't need to be binary.
 
 ## Installation
 
-Check out the command in stata for more details.
-
+### Stata (SSC)
 ```applescript
 ssc install did_multiplegt, replace
+```
+
+### R (GitHub)
+```applescript
+library(devtools)
+install_github("chaisemartinPackages/did_multiplegt/R")
 ```
 
 ## FAQ section

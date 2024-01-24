@@ -22,7 +22,7 @@ ssc install did_multiplegt, replace
 ### R (GitHub)
 ```applescript
 library(devtools)
-install_github("chaisemartinPackages/did_multiplegt/R")
+install_github("chaisemartinPackages/did_multiplegt/R", force = TRUE)
 ```
 
 ## FAQ section

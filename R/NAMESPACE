@@ -4,6 +4,7 @@ import(parallel)
 import(plotrix)
 import(sampling)
 import(stringr)
+import(wooldridge)
 
 importFrom("graphics", "axis", "lines")
 importFrom("stats", "as.formula", "cov", "lm", "predict", "residuals",

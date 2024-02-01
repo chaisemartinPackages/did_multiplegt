@@ -1,11 +1,11 @@
 Package: DIDmultiplegt
 Type: Package
 Title: Estimation in DID with Multiple Groups and Periods
-Version: 0.1.0
-Authors@R: 
-    c(person("Shuo", "Zhang", role = c("aut", "cre"), email = "shuo_zhang@ucsb.edu"),
-      person("Clément", "de Chaisemartin", role = "aut", email = "clementdechaisemartin@ucsb.edu"))
-Maintainer: Shuo Zhang <shuo_zhang@ucsb.edu>
+Version: 0.1.2
+Authors@R: c(person("Shuo", "Zhang", role = "aut", email = "s.zhang@northeastern.edu"),
+      person("Clément", "de Chaisemartin", role = "aut", email = "clement.dechaisemartin@sciencespo.fr"),
+      person("Diego", "Ciccia", role = "cre", email = "diego.ciccia@sciencespo.fr"))
+Maintainer: Diego Ciccia <diego.ciccia@sciencespo.fr>
 Description: 
     Estimate the effect of a treatment on an outcome in sharp Difference-in-Difference designs with multiple groups and periods. 
     It computes the DIDM estimator introduced in Section 4 of "Two-Way Fixed Effects Estimators with Heterogeneous
@@ -31,7 +31,8 @@ Imports: dplyr (>= 1.0.0), fixest (>= 0.6.0), plotrix, stringr,
 Suggests: wooldridge
 NeedsCompilation: no
 Packaged: 2020-10-18 04:53:09 UTC; sicongfeng
-Author: Shuo Zhang [aut, cre],
-  Clément de Chaisemartin [aut]
+Author: Shuo Zhang [aut],
+  Clément de Chaisemartin [aut],
+  Diego Ciccia [cre]
 Repository: CRAN
 Date/Publication: 2020-10-26 09:50:02 UTC

@@ -27,8 +27,7 @@ Encoding: UTF-8
 LazyData: true
 Depends: R(>= 3.4.0)
 Imports: dplyr (>= 1.0.0), fixest (>= 0.6.0), plotrix, stringr,
-        sampling, stats, parallel, assertthat
-Suggests: wooldridge
+        sampling, stats, parallel, assertthat, wooldridge
 NeedsCompilation: no
 Packaged: 2020-10-18 04:53:09 UTC; sicongfeng
 Author: Shuo Zhang [aut],

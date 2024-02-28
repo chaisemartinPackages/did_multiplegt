@@ -560,6 +560,7 @@ plot_bootstrap_result <- function(placebo, dynamic, X, LB, UB) {
 #'         placebo_i, estimated dynamic effect i periods, for all i in 0, 1, ..., k
 #'         se_placebo_i, estimated standard error of dynamic_i, if the option brep has been specified
 #'         N_placebo_i, number of observations used in the estimation of dynamic_i
+#' 
 #'
 #'
 #' @export
@@ -687,5 +688,8 @@ did_multiplegt <- function(df, Y, G, T, D, controls = c(),
 
     plot_bootstrap_result(placebo, dynamic, X, LB, UB)
     ret
+
+    message("To estimate event-study/dynamic effects, we strongly recommend using the much faster did_multiplegt_dyn command, available from the CRAN repository. In addition to that, did_multiplegt_dyn offers more options than did_multiplegt.")
+
   }
 }

@@ -19,10 +19,9 @@ The treatment doesn't need to be binary.
 ssc install did_multiplegt, replace
 ```
 
-### R (GitHub)
+### R (CRAN)
 ```applescript
-library(devtools)
-install_github("chaisemartinPackages/did_multiplegt/R", force = TRUE)
+install.packages("DIDmultiplegt")
 ```
 
 ## FAQ section

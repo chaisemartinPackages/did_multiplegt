@@ -1,7 +1,7 @@
 # did_multiplegt
 Estimation in Difference-in-Difference (DID) designs with multiple groups and periods.
 
->[!CAUTION]
+>[!NOTE]
 >To estimate event-study/dynamic effects, we strongly recommend using the <ins>much faster</ins> [did_multiplegt_dyn](https://github.com/chaisemartinPackages/did_multiplegt_dyn) command, available on [SSC](https://ideas.repec.org/c/boc/bocode/s459222.html) (Stata) and [CRAN](https://cran.r-project.org/web/packages/DIDmultiplegtDYN/index.html) (R). 
 >In addition to that, did_multiplegt_dyn offers more options than did_multiplegt.
 >

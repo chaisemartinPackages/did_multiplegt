@@ -4,7 +4,7 @@ Estimation in Difference-in-Difference (DID) designs with multiple groups and pe
 >[!IMPORTANT]
 >To estimate event-study/dynamic effects, we strongly recommend using the <ins>much faster</ins> [did_multiplegt_dyn](https://github.com/chaisemartinPackages/did_multiplegt_dyn) command, available on [SSC](https://ideas.repec.org/c/boc/bocode/s459222.html) (Stata) and [CRAN](https://cran.r-project.org/web/packages/DIDmultiplegtDYN/index.html) (R). 
 >
->In addition to that, did_multiplegt_dyn offers more options than did_multiplegt:
+>In addition to that, did_multiplegt_dyn offers more options than did_multiplegt, among which:
 >+ **normalized**: estimation of the normalized dynamic effects (de Chaisemartin & D'Haultfoeuille, 2024);
 >+ **predict_het**: built-in treatment effect heterogeneity analysis;
 >+ **design** and **date_first_switch**: post-estimation options to analyze the design and timing of the treatment;

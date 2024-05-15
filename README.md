@@ -11,9 +11,15 @@ Estimation in Difference-in-Difference (DID) designs with multiple groups and pe
 >+ **by** and **by_path**: estimating dynamic effects within levels of a group-level variable or within treatment paths;
 >+ **trends_lin**: built-in group-specific linear trends.
 >
->Lastly, as of the last release, did_multiplegt_dyn also includes two user-requested features:
+>Lastly, as of the last release, did_multiplegt_dyn also includes several user-requested features:
 >+ **only_never_switchers**: restricting the estimators from de Chaisemartin & D'Haultfoeuille (2024) to only compare switchers and never-switchers;
->+ integration with **esttab**: here a quick [tutorial](https://github.com/chaisemartinPackages/did_multiplegt_dyn/blob/main/vignettes/vignette_2.md).
+>+ Stata users' requests:
+>   - integration with **esttab**: here a quick [tutorial](https://github.com/chaisemartinPackages/did_multiplegt_dyn/blob/main/vignettes/vignette_2.md).
+>+ R users' requests:
+>   - the output of did_multiplegt_dyn can be assigned (ex: `did <- did_multiplegt_dyn(df, Y, G, T, D)`) as a list with **did_multiplegt_dyn** class;
+>   - custom class allows for built-in customized **print()** and **summary()** methods;
+>   - the displayed output can be retrieve from the assigned object by simply browsing the list;
+>   - integration with **ggplot2**: the assigned output will always contain a **ggplot** object for the event-study graph.
 >
 
 [Short description](#Short-description) | [Installation](#Installation)

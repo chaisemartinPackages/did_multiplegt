@@ -13,10 +13,11 @@
 designs with multiple groups and periods.
 {p_end}
 
-{p 4 8}
+{p 8 8}
 To estimate event-study/dynamic effects,
-we recommend using the much faster {cmd:did_multiplegt_dyn} command,
+we strongly recommend using the much faster {cmd:did_multiplegt_dyn} command,
 available from the ssc repository.
+In addition to that, {cmd:did_multiplegt_dyn} offers more options than {cmd:did_multiplegt}.
 {p_end}
 
 {marker syntax}{...}
@@ -56,15 +57,18 @@ available from the ssc repository.
 {title:Description}
 
 {p 4 4}
-{cmd:did_multiplegt} estimates the effect of a treatment on an outcome, using group-
-(e.g. county- or
-state-) level panel data with multiple groups and periods.
-The panel of groups may be unbalanced: not all groups have to be observed at every period (see FAQ section
-for more info on that).
-The data may also be at a more disaggregated level than the group level
-(e.g. individual-level
-wage data to measure the effect of a regional-level minimum-wage on individuals' wages).
-The treatment need not be binary.
+{cmd:did_multiplegt} estimates the effect of a treatment on an outcome, 
+using group- (e.g. county- or state-) level panel data with 
+multiple groups and periods.  
+Like other recently proposed DID estimation commands 
+({cmd:csdid}, {cmd:didimputation}, ...), {cmd:did_multiplegt} can be used 
+with a binary and staggered (absorbing) treatment. But unlike those other 
+commands, {cmd:did_multiplegt} can also be used with a non-binary treatment 
+(discrete or continuous) that can increase or decrease multiple times. 
+The panel of groups may be unbalanced: not all groups have to be observed at 
+every period (see FAQ section for more info on that). The data may also be at 
+a more disaggregated level than the group level (e.g. individual-level wage 
+data to measure the effect of a regional-level minimum-wage on individuals' wages).
 {p_end}
 
 {p 4 8}

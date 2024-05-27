@@ -1,7 +1,7 @@
 Package: DIDmultiplegt
 Type: Package
 Title: Estimation in DID with Multiple Groups and Periods
-Version: 0.1.3
+Version: 0.1.4
 Authors@R: c(person("Shuo", "Zhang", role = "aut", email = "s.zhang@northeastern.edu"),
       person("Clément", "de Chaisemartin", role = "aut", email = "clement.dechaisemartin@sciencespo.fr"),
       person("Diego", "Ciccia", role = "cre", email = "diego.ciccia@sciencespo.fr"))

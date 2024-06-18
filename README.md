@@ -8,7 +8,6 @@ Library of Estimators in Difference-in-Difference (DID) designs with multiple gr
 ```stata
 ssc install did_multiplegt, replace
 ```
-```
 
 ## Syntax
 

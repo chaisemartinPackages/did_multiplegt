@@ -1,10 +1,10 @@
-# did_multiplegt
+# did_multiplegt_old
 Estimation in Difference-in-Difference (DID) designs with multiple groups and periods.
 
 >[!IMPORTANT]
 >To estimate event-study/dynamic effects, we strongly recommend using the <ins>much faster</ins> [did_multiplegt_dyn](https://github.com/chaisemartinPackages/did_multiplegt_dyn) command, available on [SSC](https://ideas.repec.org/c/boc/bocode/s459222.html) (Stata) and [CRAN](https://cran.r-project.org/web/packages/DIDmultiplegtDYN/index.html) (R). 
 >
->In addition to that, did_multiplegt_dyn offers more options than did_multiplegt, among which:
+>In addition to that, did_multiplegt_dyn offers more options than did_multiplegt_old, among which:
 >+ **normalized**: estimation of the normalized dynamic effects (de Chaisemartin & D'Haultfoeuille, 2024);
 >+ **predict_het**: built-in treatment effect heterogeneity analysis;
 >+ **design** and **date_first_switch**: post-estimation options to analyze the design and timing of the treatment;
@@ -28,13 +28,13 @@ Estimation in Difference-in-Difference (DID) designs with multiple groups and pe
 
 ## Short description
 
-did_multiplegt estimates the effect of a treatment on an outcome, using group- (e.g. county- or state-) level panel data with multiple groups and periods.  Like other recently proposed DID estimation commands (csdid, didimputation...), did_multiplegt can be used with a binary and staggered (absorbing) treatment. But unlike those other commands, did_multiplegt can also be used with a non-binary treatment (discrete or continuous) that can increase or decrease multiple times. The panel of groups may be unbalanced: not all groups have to be observed at every period (see FAQ section for more info on that). The data may also be at a more disaggregated level than the group level (e.g. individual-level wage data to measure the effect of a regional-level minimum-wage on individuals' wages).
+did_multiplegt_old estimates the effect of a treatment on an outcome, using group- (e.g. county- or state-) level panel data with multiple groups and periods.  Like other recently proposed DID estimation commands (csdid, didimputation...), did_multiplegt_old can be used with a binary and staggered (absorbing) treatment. But unlike those other commands, did_multiplegt_old can also be used with a non-binary treatment (discrete or continuous) that can increase or decrease multiple times. The panel of groups may be unbalanced: not all groups have to be observed at every period (see FAQ section for more info on that). The data may also be at a more disaggregated level than the group level (e.g. individual-level wage data to measure the effect of a regional-level minimum-wage on individuals' wages).
 
 ## Installation
 
 ### Stata (SSC)
 ```stata
-ssc install did_multiplegt, replace
+ssc install did_multiplegt_old, replace
 ```
 
 ### R (CRAN)
@@ -44,7 +44,7 @@ install.packages("DIDmultiplegt")
 
 ## FAQ section
 
-> ❓**Do I have to include group- and time- fixed effects in my regression when using the did_multiplegt package?**
+> ❓**Do I have to include group- and time- fixed effects in my regression when using the did_multiplegt_old package?**
 
 
 No, you do not have to.  Even if you do not specify any of the options controls(varlist), trends_nonparam(varlist) or trends_lin(varlist), group- and time-fixed effects will be accounted for.
@@ -175,7 +175,7 @@ First, you can decrease the number of bootstrap replications performed.  By defa
 point estimates, you can decrease the number of replications.
 
 You can also speed it up when the robust_dynamic option is specified.  In staggered adoption designs with a binary treatment, you just need to define a variable
-Cohort equal to the time period when group g first gets treated (and to 0 if group g never gets treated).  Then, you need to run did_multiplegt with Cohort instead
+Cohort equal to the time period when group g first gets treated (and to 0 if group g never gets treated).  Then, you need to run did_multiplegt_old with Cohort instead
 of G as the group variable.  If the number of groups is large in your application, using this strategy can divide the computing time by more than 10.  In more
 complicated designs with a non-binary and/or non-staggered treatment, the Cohort variable needs to be defined as follows: egen Cohort=group(D1 F increase), where:
 D1 is a time-invariant variable equal to group g's treatment at the first period it appears in the data; F is a time-invariant variable equal to the first time
@@ -185,7 +185,7 @@ Cohort=group(D1 F increase trends_non_param).
 
 If you define Cohort as the group variable, you will not be able to cluster your standard errors at, say, the group level.  Then, you will need to bootstrap the
 command yourself to obtain standard errors.  To do so, you just need to: i) preserve the data; ii) draw a bootstrap sample using the bsample command (you can cluster
-the bootstrap, say, at the group level); iii) run did_multiplegt with Cohort as the group variable; iv) store the estimates somewhere; v) restore your data; vi)
+the bootstrap, say, at the group level); iii) run did_multiplegt_old with Cohort as the group variable; iv) store the estimates somewhere; v) restore your data; vi)
 replicate i) to v), say, 100 times; vii) use the standard error of your estimates across the 100 replications to estimate their actual standard errors.
 
 Specifying Cohort instead of G as the group variable will return numerically equivalent estimates, if your data is at the (g,t) level, the panel of groups is
@@ -194,9 +194,9 @@ linear trends.  Otherwise, the two estimations may give different results. For i
 groups with time-invariant weights, and one can show that imposing parallel trends at the group level is not equivalent to imposing it at the cohort level.  Without
 controls or linear trends, differences are likely to be small, however.  With controls or linear trends, differences may be larger.
  
-> ❓**Is did_multiplegt compatible with the honestdid command?**
+> ❓**Is did_multiplegt_old compatible with the honestdid command?**
 
- Yes, it is.  You can find an example of how to use honestdid after did_multiplegt [here](https://github.com/mcaceresb/stata-honestdid#staggered-timing-1).
+ Yes, it is.  You can find an example of how to use honestdid after did_multiplegt_old [here](https://github.com/mcaceresb/stata-honestdid#staggered-timing-1).
 
 **If your question is not listed above, please send an e-mail at: chaisemartin.packages@gmail.com.**
 

@@ -4,10 +4,10 @@ version 12.0
 syntax anything [if] [in] [, *]
     qui {
         foreach p in did_multiplegt_old did_multiplegt_dyn did_had {
-            which `p'
+            cap which `p'
             if _rc != 0 {
-                di as text "Installing `p' ..."
-                ssc install `p'
+                noi di as text "Installing `p' ..."
+                ssc install `p', replace
             }
         }
 

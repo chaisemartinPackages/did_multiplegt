@@ -1,0 +1,27 @@
+Package: DIDmultiplegt
+Type: Package
+Title: Estimators DID with Multiple Groups and Periods
+Version: 1.0.0
+Authors@R:
+    c(person("Diego", "Ciccia", role = c("aut", "cre"), email = "diego.ciccia@sciencespo.fr"),
+	person("Felix", "Knau", role = "aut", email = "felix.knau@sciencespo.fr"),
+	person("Mélitine", "Malezieux", role = "aut", email = "melitine.malezieux@sciencespo.fr"),	
+	person("Doulo", "Sow", role = "aut", email = "doulo.sow@ensae.fr"),
+  person("Shuo", "Zhang", role = "aut", email = "s.zhang@northeastern.edu"),
+    person("Clément", "de Chaisemartin", role = "aut", email = "clement.dechaisemartin@sciencespo.fr"))
+Maintainer: Diego Ciccia <diego.ciccia@sciencespo.fr>
+Description: Estimators of Difference-in-Differences based on de Chaisemartin and D'Haultfoeuille.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Depends: R(>= 3.4.0)
+Imports: dplyr (>= 1.0.0), fixest (>= 0.6.0), plotrix,
+        sampling, stats, parallel, magrittr, stringr,
+        DIDmultiplegtDYN, DIDHAD
+Author: Diego Ciccia [aut, cre],
+	Felix Knau [aut],
+	Mélitine Malezieux [aut],
+	Doulo Sow [aut],
+  Shuo Zhang [aut],
+  Clément de Chaisemartin [aut]
+RoxygenNote: 7.3.2

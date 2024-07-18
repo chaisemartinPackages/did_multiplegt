@@ -21,6 +21,8 @@ Estimation in Difference-in-Difference (DID) designs with multiple groups and pe
 >   - the displayed output can be retrieve from the assigned object by simply browsing the list;
 >   - integration with **ggplot2**: the assigned output will always contain a **ggplot** object for the event-study graph.
 >
+> To estimate static effects, we strongly recommend using the much faster [did_multiplegt_stat](https://github.com/chaisemartinPackages/did_multiplegt_dyn) command, available on [SSC](https://ideas.repec.org/c/boc/bocode/s459351.html).
+> In addition to speed gains, did_multiplegt_stat also offer more comprehensive and up-to-date options than did_multiplegt.
 
 [Short description](#Short-description) | [Installation](#Installation)
 

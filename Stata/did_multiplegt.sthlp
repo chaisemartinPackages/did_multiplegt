@@ -25,24 +25,63 @@ Difference-in-Difference (DID) designs with multiple groups and periods.
 
 {p 4 8}
 {cmd:did_multiplegt} wraps in a single command all
-the estimators from de Chaisemartin and D'Haultfoeuille.
+the DID estimators from de Chaisemartin and D'Haultfoeuille.
 Depending on the {cmd:mode} argument, this command can be used to call the following estimators.
 {p_end}
 
 {p 12 12}
-{stata help did_multiplegt_dyn:did_multiplegt_dyn}. In {cmd:dyn} mode, the command computes the DID event-study estimators introduced in de Chaisemartin and D'Haultfoeuille (2024a). This mode can be used both with a binary and staggered (absorbing) treatment and a non-binary treatment (discrete or continuous) that can increase or decrease multiple times. The estimator is also robust to heterogeneous effects of the current and lagged treatments. Lastly, it can be used with data where the panel structure is unblanced or more disaggregated than the group level.
+{stata help did_multiplegt_dyn:did_multiplegt_dyn}. 
+In {cmd:dyn} mode, the command computes 
+heterogeneity-robust event-study DID estimators 
+introduced in de Chaisemartin and D'Haultfoeuille (2024a).
+Like other recently proposed DID estimators 
+(csdid, didimputation, ...), these estimators 
+can be used with a binary and staggered (absorbing) 
+treatment. But unlike those other estimators, 
+these estimators can also be used with a non-binary 
+(discrete or continuous) and non-absorbing 
+treatment that can increase or decrease multiple times.  
+These estimators can also be used when lagged 
+treatments affect the outcome.
 {p_end}
 
 {p 12 12}
-{stata help did_had:did_had}. In {cmd:had} mode, the command computes the DID estimator introduced in de Chaisemartin and D'Haultfoeuille (2024b). This mode estimates the effect of a treatment on an outcome in a heterogeneous adoption design (HAD) with no stayers but some quasi stayers. 
+{stata help did_multiplegt_stat:did_multiplegt_stat}. 
+In {cmd:stat} mode, the command computes 
+heterogeneity-robust DID estimators introduced in de Chaisemartin and 
+D'Haultfoeuille (2020) and de Chaisemartin et al. (2022). These estimators can be used with a
+non-binary (discrete or continuous) and non-absorbing treatment. However, they assume 
+that past  treatments do not affect the current outcome.
+Finally, these estimators can be used to compute IV-DID estimators, relying on a parallel-trends assumption with respect 
+to an instrumental variable rather than the treatment.
 {p_end}
 
 {p 12 12}
-{stata help did_multiplegt_old:did_multiplegt_old}. In {cmd:old} mode, the command computes the DID estimators introduced in de Chaisemartin and D'Haultfoeuille (2020). This mode corresponds to the old version of the did_multiplegt command. Specifically, it can be used to estimate DID_M, i.e. the average across t and d of the treatment effects of groups that have treatment d at t-1 and change their treatment at t, using groups that have treatment d at t-1 and t as controls. This mode could also be used to compute event-study estimates, but we strongly suggest to use the {cmd:dyn} mode, since it is way faster and includes comprehensive estimation and post-estimation support.
+{stata help did_had:did_had}. 
+In {cmd:had} mode, the command 
+computes the DID estimators 
+introduced in de Chaisemartin and D'Haultfoeuille (2024b). 
+These estimators can be used in heterogeneous adoption designs (HAD) 
+with no stayers but some quasi stayers. 
+{p_end}
+
+{p 12 12}
+{stata help did_multiplegt_old:did_multiplegt_old}. 
+In {cmd:old} mode, the command computes the DID 
+estimators introduced in de Chaisemartin and 
+D'Haultfoeuille (2020). This mode corresponds 
+to the old version of the did_multiplegt command.
+We do not recommend using this mode. The three aforementioned modes are much faster, because
+they do not rely on the bootstrap to compute standard errors. Moreover,
+they offer more comprehensive and up to date estimation and post-estimation options.
 {p_end}
 
 {p 4 8}
-{cmd:did_multiplegt} updates automatically all the packages above (on average) every 100 runs of the command. Self-updates can be stopped by specifying the command with the {cmd:no_updates} option.
+{cmd:did_multiplegt} updates 
+automatically all the packages above 
+(on average) every 100 runs of the command. 
+Self-updates can be stopped by 
+specifying the command with the {cmd:no_updates} option.
 {p_end}
 
 {marker arguments}{...}
@@ -69,7 +108,12 @@ Depending on the {cmd:mode} argument, this command can be used to call the follo
 {p_end}
 
 {p 4 4}
-{cmd:options} is a pass-through and can include all the options of the command called with {cmd:mode}. It can include the {cmd:no_updates} option, which will apply only for {cmd:did_multiplegt} and will not be passed onto the {cmd:mode} options.
+{cmd:options} is a pass-through 
+and can include all the options of the 
+command called with {cmd:mode}. It can 
+include the {cmd:no_updates} option, which 
+will apply only for {cmd:did_multiplegt} and 
+will not be passed onto the {cmd:mode} options.
 {p_end}
 
 {marker Example}{...}
@@ -84,6 +128,10 @@ Computing DID_M from de Chaisemartin and D'Haultfoeuille (2020):
 {p 4 8}
 {stata did_multiplegt (old) lwage nr year union, breps(100) cluster(nr)}
 {p_end}
+{p 4 8}
+{stata did_multiplegt (stat) lwage nr year union, exact_match}
+{p_end}
+
 
 Computing 5 dynamic effects and 2 placebos using DID_l from de Chaisemartin and D'Haultfoeuille (2024a):
 {p 4 8}
@@ -95,6 +143,10 @@ Computing 5 dynamic effects and 2 placebos using DID_l from de Chaisemartin and 
 {p 4 8}
 de Chaisemartin, C and D'Haultfoeuille, X (2020). American Economic Review, vol. 110, no. 9.
 {browse "https://www.aeaweb.org/articles?id=10.1257/aer.20181169":Two-Way Fixed Effects Estimators with Heterogeneous Treatment Effects}.
+{p_end}
+{p 4 8}
+de Chaisemartin, C, D'Haultfoeuille, X, Pasquier, F, Vazquez‐Bare, G (2022). 
+{browse "https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4011782":Difference-in-Differences for Continuous Treatments and Instruments with Stayers}.
 {p_end}
 {p 4 8}
 de Chaisemartin, C and D'Haultfoeuille, X (2024a). Review of Economics and Statistics, 1-45.
@@ -124,10 +176,16 @@ Xavier D'Haultfoeuille, CREST-ENSAE, France.
 Felix Knau, Sciences Po, France.
 {p_end}
 {p 4 4}
+Felix Pasquier, CREST-ENSAE, France.
+{p_end}
+{p 4 4}
 Mélitine Malézieux, Stockholm School of Economics, Sweden.
 {p_end}
 {p 4 4}
 Doulo Sow, Sciences Po, France.
+{p_end}
+{p 4 4}
+Gonzalo Vazquez-Bare, UCSB, USA.
 {p_end}
 
 {title:Contact}
@@ -139,5 +197,9 @@ Mail:
 
 {p 4 4}
 GitHub:
-{browse "https://github.com/chaisemartinPackages":chaisemartinPackages} or individual packages ({browse "https://github.com/chaisemartinPackages/did_multiplegt_dyn":did_multiplegt_dyn} | {browse "https://github.com/chaisemartinPackages/did_had":did_had} | {browse "https://github.com/chaisemartinPackages/did_multiplegt":did_multiplegt}).
+{browse "https://github.com/chaisemartinPackages":chaisemartinPackages} 
+or individual packages ({browse "https://github.com/chaisemartinPackages/did_multiplegt_dyn":did_multiplegt_dyn} 
+| {browse "https://github.com/chaisemartinPackages/did_multiplegt_stat":did_multiplegt_stat}
+| {browse "https://github.com/chaisemartinPackages/did_had":did_had} 
+| {browse "https://github.com/chaisemartinPackages/did_multiplegt":did_multiplegt}).
 {p_end}

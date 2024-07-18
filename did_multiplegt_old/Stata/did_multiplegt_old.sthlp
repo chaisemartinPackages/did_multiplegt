@@ -14,10 +14,12 @@ designs with multiple groups and periods.
 {p_end}
 
 {p 8 8}
-To estimate event-study/dynamic effects,
-we strongly recommend using the much faster {cmd:did_multiplegt_dyn} command,
-available from the ssc repository.
-In addition to that, {cmd:did_multiplegt_dyn} offers more options than {cmd:did_multiplegt_old}.
+To estimate event-study/dynamic effects, we strongly recommend using
+the much faster {cmd:did_multiplegt_dyn} command, available from the ssc repository.
+To estimate static effects, we strongly recommend using
+the much faster {cmd:did_multiplegt_stat} command, available from the ssc repository.
+In addition to speed gains, {cmd:did_multiplegt_dyn} and {cmd:did_multiplegt_stat} 
+also offer more comprehensive and up-to-date options than {cmd:did_multiplegt_old}.
 {p_end}
 
 {marker syntax}{...}

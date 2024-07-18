@@ -876,7 +876,10 @@ di as input " "
 display _newline
 di as input "To estimate event-study/dynamic effects, we strongly recommend using"
 di as input "the much faster did_multiplegt_dyn command, available from the ssc repository."
-di as input "In addition to that, did_multiplegt_dyn offers more options than did_multiplegt."
+di as input "To estimate static effects, we strongly recommend using"
+di as input "the much faster did_multiplegt_stat command, available from the ssc repository."
+di as input "In addition to speed gains, did_multiplegt_dyn and did_multiplegt_stat"
+di as input "also offer more comprehensive and up-to-date options than did_multiplegt_old."
 noisily matlist didmgt_results, title("DID estimators of the instantaneous treatment effect, of dynamic treatment effects if the dynamic option is used, and of placebo tests of the parallel trends assumption if the placebo option is used. The estimators are robust to heterogeneous effects, and to dynamic effects if the robust_dynamic option is used.")
 matrix didmgt_b2=didmgt_results[1...,1..1]
 ereturn matrix didmgt_estimates=didmgt_b2

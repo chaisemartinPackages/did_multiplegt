@@ -677,7 +677,7 @@ did_multiplegt_old <- function(df, Y, G, T, D, controls = c(),
                               trends_nonparam, trends_lin)
 
   if (brep == 0) {
-    eret
+    return(eret)
   } else {
     bret = did_multiplegt_bootstrap(df_preprocess, controls, brep, trends_nonparam, trends_lin,
                                     has_cluster = !is.null(cluster),
@@ -775,9 +775,9 @@ did_multiplegt_old <- function(df, Y, G, T, D, controls = c(),
     }
 
     plot_bootstrap_result(placebo, dynamic, X, LB, UB)
-    ret
 
     message("To estimate event-study/dynamic effects, we strongly recommend using the much faster did_multiplegt_dyn command, available from the CRAN repository. In addition to that, did_multiplegt_dyn offers more options than did_multiplegt.")
+    return(ret)
 
   }
 }
